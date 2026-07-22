@@ -1,0 +1,6 @@
+# Dependencias Python del servidor.
+# Instalar con:  pip install -r requirements.txt --break-system-packages
+#
+# Nota: nmap NO es un paquete de pip, es un binario del sistema.
+# En Kali ya viene instalado; si no, se instala con:  apt install -y nmap
+Flask>=3.0
