@@ -156,7 +156,7 @@
     <div class="item" data-op="netscan"><span class="idx">01</span><span class="lead"></span>ESCANEO DE RED</div>
     <div class="item" data-op="portscan"><span class="idx">02</span><span class="lead"></span>ESCANEO DE PUERTOS</div>
     <div class="item" data-op="status"><span class="idx">03</span><span class="lead"></span>ESTADO DEL SISTEMA</div>
-    <div class="item locked" data-op="wifi"><span class="tag">BLOQUEADO</span><span class="lead"></span>OPERACIONES WIFI</div>
+    <div class="item" data-op="wifiscan"><span class="idx">04</span><span class="lead"></span>RECONOCIMIENTO WIFI</div>
     <div class="item" data-op="clear"><span class="idx">00</span><span class="lead"></span>LIMPIAR CONSOLA</div>
   </nav>
 
@@ -291,6 +291,7 @@ document.querySelectorAll('.item').forEach(el=>{
     if(el.classList.contains('locked')){push('[!] Módulo WiFi no implementado — requiere adaptador en modo monitor','warn');return;}
     if(op==='clear'){clearOut();return;}
     if(op==='status'){doStatus();return;}
+    if(op==='wifiscan'){startWifiScan();return;}
     document.querySelectorAll('.item').forEach(i=>i.classList.remove('active'));
     el.classList.add('active');mode=op;
     const isPort=op==='portscan';
@@ -310,6 +311,37 @@ function doStatus(){
   push('    nmap ............ listo','ok');
   push('    modulo wifi ..... OFFLINE (esperando adaptador)','down');
   push('    scope ........... solo redes autorizadas','');
+}
+
+async function startWifiScan(){
+  clearOut();setRunning(true);
+  push('[*] Reconocimiento WiFi pasivo — escuchando el aire (30s)...','sys');
+  if(DEMO){simulateWifi();return;}
+  try{
+    const r=await fetch('/api/wifi/scan',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({seconds:30})});
+    const j=await r.json();
+    if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
+    openStream();
+  }catch(e){push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateWifi();}
+}
+
+function simulateWifi(){
+  const lines=[
+    ['[*] Escuchando el aire 30s sobre wlan2...','sys'],
+    ['[OK] 7 redes detectadas:','sys'],['',''],
+    ['   -21dBm  CH 11  OK         MOVISTAR-WIFI6          WPA2-CCMP','up'],
+    ['   -58dBm  CH  1  DEBIL      WLED-AP                 Usa TKIP, obsoleto','warn'],
+    ['   -64dBm  CH  5  OK         Telecentro-6456         WPA2-CCMP','up'],
+    ['   -80dBm  CH  6  CRITICO    Personal Wifi Zone      Red abierta','err'],
+    ['   -82dBm  CH  1  OPTIMO     <oculta>                WPA3 (SAE)','up'],
+    ['   -82dBm  CH  1  DEBIL      Fibertel WiFi695        Modo mixto WPA/WPA2','warn'],
+    ['   -88dBm  CH  1  CRITICO    Personal Wifi Zone      Red abierta','err'],
+    ['',''],
+    ["[*] Resumen: {'OK': 3, 'DEBIL': 2, 'CRITICO': 2, 'OPTIMO': 1}",'sys'],
+    ['[*] Clientes detectados: 3','sys'],['── PROCESO FINALIZADO ──','sys']];
+  let i=0;const t=setInterval(()=>{if(i>=lines.length){clearInterval(t);setRunning(false);return;}
+    push(lines[i][0],lines[i][1]);i++;},300);
 }
 
 async function runScan(){

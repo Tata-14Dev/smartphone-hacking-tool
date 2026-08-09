@@ -16,6 +16,7 @@ import queue
 
 from logger import get_logger
 from modules.network import NetworkScanner, ValidationError
+from modules.wifi_scan import WifiScanner
 
 log = get_logger(__name__)
 
@@ -34,6 +35,10 @@ output_queue: "queue.Queue[str]" = queue.Queue()
 # que produce Nmap termina en la cola automaticamente. Aca se conectan
 # los dos modulos.
 scanner = NetworkScanner(on_line=output_queue.put)
+
+# Scanner WiFi pasivo (reconocimiento). iface = interfaz en modo monitor.
+# Ajustar a 'wlan2mon' si ese es el nombre que muestra `iw dev`.
+wifi = WifiScanner(on_line=output_queue.put, iface="wlan2")
 
 
 # ── 2. Generador del stream SSE ──────────────────────────────────────
@@ -110,15 +115,27 @@ def scan_ports():
     return jsonify({"status": "started", "target": target, "ports": ports})
 
 
-# ── 5. Endpoints WiFi ofensivos: STUBS ───────────────────────────────
-# Estas rutas quedan como marcador de posicion. La logica (que corre solo
-# contra tu propio lab y depende del adaptador en modo monitor) la
-# completas vos en modules/wifi.py cuando llegue la antena.
+# ── 5. Endpoint WiFi: reconocimiento pasivo ──────────────────────────
+@app.route("/api/wifi/scan", methods=["POST"])
+def wifi_scan():
+    """Reconocimiento WiFi pasivo (escucha). Body opcional: { "seconds": 30 }"""
+    seconds = int((request.get_json(silent=True) or {}).get("seconds", 30))
+    seconds = max(10, min(seconds, 120))   # limite: entre 10 y 120 segundos
+    _clear_queue()
+    try:
+        wifi.run_scan(seconds=seconds)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Fallo al iniciar escaneo wifi: %s", exc)
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"status": "started", "seconds": seconds})
+
+
+# Los endpoints ofensivos quedan deshabilitados a proposito.
 @app.route("/api/wifi/deauth", methods=["POST"])
 @app.route("/api/wifi/handshake", methods=["POST"])
 @app.route("/api/wifi/eviltwin", methods=["POST"])
-def wifi_not_implemented():
-    return jsonify({"error": "Modulo WiFi no implementado todavia"}), 501
+def wifi_offensive_blocked():
+    return jsonify({"error": "Operacion no disponible"}), 501
 
 
 # ── 6. Arranque ──────────────────────────────────────────────────────
