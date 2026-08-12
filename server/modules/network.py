@@ -144,7 +144,17 @@ class NetworkScanner:
         target = validate_target(target)
         ports = validate_ports(ports)
         log.info("Port scan sobre %s puertos %s", target, ports)
-        cmd = [self._nmap, "-sV", "-p", ports, target]
+        # Limites para que -sV no se cuelgue en WiFi / muchos puertos:
+        #   --version-intensity 4 -> menos sondas por servicio (0-9, default 7)
+        #   --host-timeout 120s   -> abandona un host que tarda demasiado
+        #   -T4                   -> timing agresivo, bueno en red local
+        cmd = [
+            self._nmap, "-sV",
+            "--version-intensity", "4",
+            "--host-timeout", "120s",
+            "-T4",
+            "-p", ports, target,
+        ]
         return self._spawn(cmd)
 
     # ── Helper: lanza _run en un thread para no bloquear el servidor ──────
