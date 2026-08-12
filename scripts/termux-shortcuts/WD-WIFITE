@@ -1,0 +1,12 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# Puente Termux -> chroot Kali. Requiere root (Magisk autoriza Termux).
+# Auditoria automatizada Wifite sobre wlan2 (no pide argumentos).
+# USO AUTORIZADO UNICAMENTE: redes propias / lab.
+KALI="/data/local/nhsystem/kali-arm64"
+PATHK="export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+PROJ="cd /root/watchdog-git"
+echo "== WIFITE AUTO =="
+echo "Antena externa en modo monitor requerida (WD-MONITOR)."
+echo
+su -c "chroot $KALI /bin/bash -c '$PATHK; $PROJ && bash scripts/kali-scripts/wifite_auto.sh'"
+echo; echo "[enter para cerrar]"; read

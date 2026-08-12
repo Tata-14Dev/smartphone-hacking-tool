@@ -12,7 +12,11 @@ Arrancar parado en la carpeta server/:
 
 from flask import Flask, render_template, jsonify, request, Response
 import os
+import re
 import queue
+import signal
+import subprocess
+import threading
 
 from logger import get_logger
 from modules.network import NetworkScanner, ValidationError
@@ -130,15 +134,150 @@ def wifi_scan():
     return jsonify({"status": "started", "seconds": seconds})
 
 
-# Los endpoints ofensivos quedan deshabilitados a proposito.
+@app.route("/api/wifi/targets", methods=["GET"])
+def wifi_targets():
+    """
+    Devuelve los objetivos del ULTIMO reconocimiento WiFi (redes + clientes)
+    ya parseados. La UI los usa para que el usuario elija un AP en vez de
+    tipear el BSSID/SSID a mano. Si todavia no se corrio un scan, devuelve
+    listas vacias.
+    """
+    return jsonify(wifi.last_result)
+
+
+# ── 6. Endpoints WiFi ofensivos ──────────────────────────────────────
+#
+# ADVERTENCIA DE ALCANCE: estas operaciones (deauth, evil twin, wifite)
+# solo deben usarse sobre redes PROPIAS o con autorizacion explicita.
+# Ejecutan scripts de Kali que viven en scripts/kali-scripts/.
+#
+# Los scripts se ejecutan en su PROPIA sesion (start_new_session=True) para
+# poder matar todo el arbol de procesos desde /api/stop. Cada linea de salida
+# se limpia de codigos de color ANSI y se empuja a la cola SSE, igual que hace
+# NetworkScanner._run con Nmap.
+
+# Regex que saca las secuencias de color ANSI (\033[...m) de la salida bash.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+# Carpeta absoluta de los scripts de Kali (../scripts/kali-scripts).
+_SCRIPTS_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "scripts", "kali-scripts")
+)
+
+# Proceso ofensivo en curso (uno por vez). Protegido con un lock porque lo
+# tocan dos hilos: el worker que corre el script y el request de /api/stop.
+_proc_lock = threading.Lock()
+_current_proc: "subprocess.Popen | None" = None
+
+
+def launch_asynchronous_attack(script_name: str, args_list=None) -> threading.Thread:
+    """
+    Limpia la cola, arma el comando (bash + script + args) y lo corre en un
+    hilo daemon. Streamea la salida al SSE y al terminar emite '__DONE__'.
+
+    Se invoca 'bash <script>' en vez de './<script>' para no depender del bit
+    +x (Windows no lo maneja; ver notas del proyecto).
+    """
+    _clear_queue()
+    script_path = os.path.join(_SCRIPTS_DIR, script_name)
+    cmd = ["bash", script_path] + list(args_list or [])
+
+    def worker() -> None:
+        global _current_proc
+        log.info("Ejecutando script ofensivo: %s", " ".join(cmd))
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,   # junta stderr con stdout
+                text=True,
+                bufsize=1,                  # linea por linea
+                start_new_session=True,     # sesion propia -> matable por grupo
+            )
+            with _proc_lock:
+                _current_proc = proc
+
+            for line in iter(proc.stdout.readline, ""):
+                line = _ANSI_RE.sub("", line).rstrip("\n")
+                if line:
+                    output_queue.put(line)
+            proc.wait()
+            log.info("Script finalizado (codigo %s)", proc.returncode)
+
+        except FileNotFoundError:
+            msg = f"[ERROR] Script no encontrado: {script_path}"
+            log.error(msg)
+            output_queue.put(msg)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("Fallo ejecutando el script")
+            output_queue.put(f"[ERROR] {exc}")
+        finally:
+            with _proc_lock:
+                _current_proc = None
+            output_queue.put("__DONE__")   # la UI espera esto para cerrar
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    return thread
+
+
 @app.route("/api/wifi/deauth", methods=["POST"])
+def wifi_deauth():
+    """Deauth dirigido/masivo con aireplay-ng. Body: {bssid, client?, count?}"""
+    data = request.get_json(silent=True) or {}
+    bssid = data.get("bssid")
+    client = data.get("client", "FF:FF:FF:FF:FF:FF")
+    count = str(data.get("count", "20"))
+    if not bssid:
+        return jsonify({"error": "Se requiere el BSSID de la red objetivo"}), 400
+    # Orden posicional esperado por el script: bssid, client, count
+    launch_asynchronous_attack("wifi_deauth.sh", [bssid, client, count])
+    return jsonify({"status": "started", "message": f"Deauth lanzado contra AP {bssid}"})
+
+
 @app.route("/api/wifi/handshake", methods=["POST"])
+def wifi_handshake():
+    """Auditoria automatizada de Wifite en wlan2 (captura/crackeo)."""
+    launch_asynchronous_attack("wifite_auto.sh")
+    return jsonify({"status": "started", "message": "Auditoria Wifite iniciada en wlan2"})
+
+
 @app.route("/api/wifi/eviltwin", methods=["POST"])
-def wifi_offensive_blocked():
-    return jsonify({"error": "Operacion no disponible"}), 501
+def wifi_evil_twin():
+    """Punto de acceso falso clonando un SSID con hostapd. Body: {ssid}"""
+    data = request.get_json(silent=True) or {}
+    ssid = data.get("ssid")
+    if not ssid:
+        return jsonify({"error": "Se requiere el SSID objetivo para clonar"}), 400
+    launch_asynchronous_attack("wifi_eviltwin.sh", [ssid])
+    return jsonify({"status": "started", "message": f"Evil twin desplegado: {ssid}"})
 
 
-# ── 6. Arranque ──────────────────────────────────────────────────────
+# ── 6b. Detener el proceso ofensivo en curso ─────────────────────────
+@app.route("/api/stop", methods=["POST"])
+def stop_attack():
+    """
+    Mata el proceso ofensivo activo (y todo su grupo: hostapd, wifite, etc.).
+    Necesario para deauth/evil twin/wifite que corren indefinidamente.
+    Es idempotente: si no hay nada corriendo responde 'idle'.
+    """
+    with _proc_lock:
+        proc = _current_proc
+    if proc is None:
+        return jsonify({"status": "idle", "message": "No hay proceso activo"}), 200
+    try:
+        # Matamos el GRUPO entero (setsid dio un pgid propio), no solo el bash.
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+    except ProcessLookupError:
+        pass  # ya habia terminado solo
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Fallo al detener proceso: %s", exc)
+        return jsonify({"error": str(exc)}), 500
+    output_queue.put("[!] Proceso detenido por el usuario")
+    return jsonify({"status": "stopped"})
+
+
+# ── 7. Arranque ──────────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info("Iniciando servidor en http://0.0.0.0:5001")
     # debug=False para una v1; threaded=True para atender el SSE + requests.

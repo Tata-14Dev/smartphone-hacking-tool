@@ -2,5 +2,5 @@
 # Puente Termux -> chroot Kali. Requiere root (Magisk autoriza Termux).
 KALI="/data/local/nhsystem/kali-arm64"
 PATHK="export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-su -c "chroot $KALI /bin/bash -c '$PATHK; cd /root/watchdog-git && ./monitor.sh'"
+su -c "chroot $KALI /bin/bash -c '$PATHK; cd /root/watchdog-git && bash scripts/kali-scripts/monitor.sh'"
 echo; echo "[enter para cerrar]"; read

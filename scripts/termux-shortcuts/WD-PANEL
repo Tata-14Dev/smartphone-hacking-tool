@@ -3,4 +3,4 @@
 KALI="/data/local/nhsystem/kali-arm64"
 PATHK="export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 PROJ="cd /root/watchdog-git"
-su -c "chroot $KALI /bin/bash -c '$PATHK; $PROJ && ./ctl.sh'"
+su -c "chroot $KALI /bin/bash -c '$PATHK; $PROJ && bash scripts/kali-scripts/ctl.sh'"

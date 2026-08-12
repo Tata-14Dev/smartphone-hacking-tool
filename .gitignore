@@ -7,3 +7,17 @@ __pycache__/
 *.pcap
 *.cap
 .DS_Store
+
+# Export / artefactos generados
+smartphone-hacking-tool.pdf
+*.pdf
+
+# Capturas y credenciales de auditoria (NUNCA subir)
+handshakes/
+cracked.txt
+accesos_exitosos.txt
+
+# Temporales runtime
+*.tmp
+hostapd.conf
+scans/

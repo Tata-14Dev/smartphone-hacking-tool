@@ -1,0 +1,19 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# Puente Termux -> chroot Kali. Requiere root (Magisk autoriza Termux).
+# Corta cualquier operacion ofensiva en curso (equivalente a /api/stop de la web):
+# mata aireplay-ng / hostapd / wifite y devuelve wlan2 a modo managed.
+KALI="/data/local/nhsystem/kali-arm64"
+PATHK="export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+IFACE="wlan2"
+
+echo "== DETENER ATAQUES =="
+su -c "chroot $KALI /bin/bash -c '$PATHK; \
+  pkill -f aireplay-ng 2>/dev/null; \
+  pkill -f hostapd 2>/dev/null; \
+  pkill -f wifite 2>/dev/null; \
+  pkill -f airodump-ng 2>/dev/null; \
+  ip link set $IFACE down 2>/dev/null; \
+  iw dev $IFACE set type managed 2>/dev/null; \
+  ip link set $IFACE up 2>/dev/null; \
+  echo \"[OK] Procesos ofensivos detenidos y $IFACE en managed.\"'"
+echo; echo "[enter para cerrar]"; read

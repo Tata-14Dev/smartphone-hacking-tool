@@ -137,6 +137,9 @@ class WifiScanner:
     def __init__(self, on_line: LineCallback, iface: str = "wlan2") -> None:
         self._on_line = on_line
         self._iface = iface
+        # Ultimo escaneo parseado. Lo consulta /api/wifi/targets para que la
+        # UI ofrezca objetivos ya descubiertos (BSSID/SSID/clientes).
+        self.last_result: Dict[str, List[dict]] = {"redes": [], "clientes": []}
 
     def run_scan(self, seconds: int = 30, prefix: str = "/tmp/wd_recon") -> threading.Thread:
         t = threading.Thread(target=self._scan, args=(seconds, prefix), daemon=True)
@@ -177,6 +180,8 @@ class WifiScanner:
             self._on_line("__DONE__")
             return
 
+        # Guardamos el resultado para que la UI pueda ofrecerlo como objetivos.
+        self.last_result = data
         self._report(data)
         self._on_line("__DONE__")
 

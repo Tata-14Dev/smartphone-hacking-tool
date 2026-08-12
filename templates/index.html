@@ -85,6 +85,10 @@
     border:1px solid var(--red);padding:1px 5px;letter-spacing:1px;transform:translateY(-3px)}
   .item.active{color:var(--white)}
   .item.active .lead{border-color:var(--white);opacity:1}
+  /* operaciones ofensivas: acento rojo apenas perceptible */
+  .item.off .idx{color:var(--red);opacity:.8}
+  .item.off.active{color:var(--red)}
+  .item.off.active .lead{border-color:var(--red)}
 
   .console{margin:22px 26px 22px 8px;border:1px solid var(--edge);background:var(--panel);
     display:flex;flex-direction:column;min-height:0}
@@ -110,6 +114,14 @@
   .out .down{color:var(--dim)}
   .out::-webkit-scrollbar{width:8px}
   .out::-webkit-scrollbar-thumb{background:#333}
+  /* filas de objetivos clickeables (deauth / evil twin) */
+  .out .tgt{cursor:pointer;color:var(--ink);border-left:2px solid transparent;
+    padding-left:4px;transition:.1s}
+  .out .tgt:hover{color:var(--white);border-left-color:var(--red);background:rgba(226,59,47,.08)}
+  .tgtbtn{display:inline-block;margin:8px 0;background:transparent;border:1px solid var(--gray);
+    color:var(--white);font-family:var(--disp);font-weight:600;letter-spacing:1px;
+    padding:8px 12px;cursor:pointer;font-size:12px}
+  .tgtbtn:hover{background:var(--white);color:#0a0a0a}
 
   footer{grid-column:1/3;border-top:1px solid var(--edge);overflow:hidden;padding:9px 0;background:#080808}
   .ticker{white-space:nowrap;font-size:11px;letter-spacing:2px;color:var(--dim);animation:slide 28s linear infinite}
@@ -157,15 +169,26 @@
     <div class="item" data-op="portscan"><span class="idx">02</span><span class="lead"></span>ESCANEO DE PUERTOS</div>
     <div class="item" data-op="status"><span class="idx">03</span><span class="lead"></span>ESTADO DEL SISTEMA</div>
     <div class="item" data-op="wifiscan"><span class="idx">04</span><span class="lead"></span>RECONOCIMIENTO WIFI</div>
+    <div class="item off" data-op="deauth"><span class="idx">05</span><span class="lead"></span>DEAUTH WIFI</div>
+    <div class="item off" data-op="eviltwin"><span class="idx">06</span><span class="lead"></span>EVIL TWIN</div>
+    <div class="item off" data-op="wifite"><span class="idx">07</span><span class="lead"></span>WIFITE AUTO</div>
     <div class="item" data-op="clear"><span class="idx">00</span><span class="lead"></span>LIMPIAR CONSOLA</div>
   </nav>
 
   <section class="console">
     <div class="cbar">
-      <span class="lbl">OBJETIVO</span>
+      <span class="lbl" id="targetlbl">OBJETIVO</span>
       <input id="target" value="192.168.1.0/24" spellcheck="false">
       <span class="lbl" id="portslbl" style="display:none">PUERTOS</span>
       <input id="ports" value="1-1000" spellcheck="false" style="display:none">
+      <span class="lbl" id="bssidlbl" style="display:none">BSSID</span>
+      <input id="bssid" placeholder="AA:BB:CC:DD:EE:FF" spellcheck="false" style="display:none">
+      <span class="lbl" id="clientlbl" style="display:none">CLIENTE</span>
+      <input id="client" value="FF:FF:FF:FF:FF:FF" spellcheck="false" style="display:none">
+      <span class="lbl" id="countlbl" style="display:none">TRAMAS</span>
+      <input id="count" value="20" spellcheck="false" style="display:none">
+      <span class="lbl" id="ssidlbl" style="display:none">SSID</span>
+      <input id="ssid" placeholder="Red_a_clonar" spellcheck="false" style="display:none">
       <button class="run" id="runbtn">EJECUTAR</button>
       <button class="run stop" id="stopbtn" style="display:none">ABORTAR</button>
     </div>
@@ -200,44 +223,97 @@ setInterval(()=>{const d=new Date();
 /* Dos frames por calavera: mandibula cerrada (A) y abierta (B).
    Cada calavera se desplaza en diagonal y alterna A/B (mueve la mandibula). */
 const SKULL_A=[
-"   _______   ",
-"  /       \\  ",
-" |  .-. .-. | ",
-" |  (o)(o)  | ",
-" |    ^^    | ",
-" |  .---.   | ",
-"  \\ |||||  /  ",
-"   '-----'   "];
+"          ___-----------___          ",
+"      __--~~               ~~--__      ",
+"    _-~                         ~-_    ",
+"   /                               \\   ",
+"  |                                 |  ",
+" |                                   | ",
+" |                                   | ",
+"|                                     |",
+"|                                     |",
+"|                                     |",
+" |                                   | ",
+" |   _-------_           _-------_   | ",
+" |  /~        ~\\         /~        ~\\  | ",
+"  | |          |         |          | |  ",
+"  | |          |         |          | |  ",
+"  |  \\_       _/           \\_       _/  |  ",
+"  |    ~-___-~     /~V~\\     ~-___-~    |  ",
+"  |             |       |             |  ",
+"   |            |  /^\\  |            |   ",
+"   |            ~~     ~~            |   ",
+"    \\_       _                 _    _/    ",
+"      ~-__-~ ~\\             /~ ~-__-~      ",
+"         \\     \\           /     /         ",
+"          |  ( ~(__(_|_)__)~ )  |          ",
+"          |   \\/ [ [ | ] ] \\/   |          ",
+"           |     [ | | | ]     |           ",
+"            \\                 /            ",
+"             ~-_           _-~             ",
+"                ~--___--~                "];
 const SKULL_B=[
-"   _______   ",
-"  /       \\  ",
-" |  .-. .-. | ",
-" |  (o)(o)  | ",
-" |    ^^    | ",
-" |  .---.   | ",
-"  \\ | | | /  ",
-"   '_|_|_'   "];
+"          ___-----------___          ",
+"      __--~~               ~~--__      ",
+"    _-~                         ~-_    ",
+"   /                               \\   ",
+"  |                                 |  ",
+" |                                   | ",
+" |                                   | ",
+"|                                     |",
+"|                                     |",
+"|                                     |",
+" |                                   | ",
+" |   _-------_           _-------_   | ",
+" |  /~        ~\\         /~        ~\\  | ",
+"  | |          |         |          | |  ",
+"  | |          |         |          | |  ",
+"  |  \\_       _/           \\_       _/  |  ",
+"  |    ~-___-~     /~V~\\     ~-___-~    |  ",
+"  |             |       |             |  ",
+"   |            |  /^\\  |            |   ",
+"   |            ~~     ~~            |   ",
+"    \\_       _                 _    _/    ",
+"      ~-__-~ ~\\             /~ ~-__-~      ",
+"         \\                       /         ",
+"          |   (  (__(_|_)__)  )   |          ",
+"          |    [ [       ] ]    |          ",
+"           |    [   | |   ]    |           ",
+"            \\_               _/            ",
+"              ~-_         _-~              ",
+"                 ~--___--~                "];
 
 const cv=document.getElementById('noise'),cx=cv.getContext('2d');
-const CELL=13, LINEH=13;
+const CELL=7, LINEH=7;                            // px por caracter / por linea (base)
+const SK_ROWS=SKULL_A.length;                     // filas de la calavera
+const SK_COLS=Math.max(...SKULL_A.map(l=>l.length)); // ancho en caracteres
 let skulls=[];
 function makeSkulls(){
-  const count=Math.max(6,Math.floor((innerWidth*innerHeight)/95000));
+  // MUCHAS calaveras pero distinguibles: densidad alta + fuerte variacion de
+  // escala y opacidad. La opacidad depende del tamaño (efecto de profundidad:
+  // las grandes se ven "cerca"/mas nitidas, las chicas "lejos"/mas tenues),
+  // asi cada una se lee por separado en vez de fundirse en una mancha.
+  const count=Math.min(64,Math.max(8,Math.floor((innerWidth*innerHeight)/42000)));
   skulls=[];
   for(let i=0;i<count;i++){
     const dir=Math.random()>.5?1:-1;          // diagonal a der o izq
+    const scale=0.26+Math.random()*0.55;      // 0.26–0.81: rango amplio
+    const depth=(scale-0.26)/0.55;            // 0 (chica/lejos) .. 1 (grande/cerca)
     skulls.push({
       x:Math.random()*innerWidth,
       y:Math.random()*innerHeight,
-      vx:dir*(0.10+Math.random()*0.18),
-      vy:(0.06+Math.random()*0.12),
+      vx:dir*(0.08+Math.random()*0.16+depth*0.06),  // las grandes van un toque mas rapido
+      vy:(0.05+Math.random()*0.10+depth*0.05),
       jaw:Math.random()>.5?1:0,
       jawT:Math.random()*1000,
-      jawSpeed:400+Math.random()*500,          // ms por apertura
-      scale:1.0+Math.random()*0.8,
-      tint:Math.random()<0.14?(Math.random()<0.5?'cyan':'red'):'gray'
+      jawSpeed:380+Math.random()*520,          // ms por apertura de mandibula
+      scale:scale,
+      alpha:0.13+depth*0.27,                   // 0.13–0.40 segun profundidad
+      tint:Math.random()<0.13?(Math.random()<0.5?'cyan':'red'):'gray'
     });
   }
+  // dibujar primero las chicas/tenues y encima las grandes/nitidas
+  skulls.sort((a,b)=>a.scale-b.scale);
 }
 function sizeCanvas(){cv.width=innerWidth;cv.height=innerHeight;makeSkulls();}
 sizeCanvas();addEventListener('resize',sizeCanvas);
@@ -249,16 +325,18 @@ function drawSkulls(now){
   for(const s of skulls){
     // mover en diagonal
     s.x+=s.vx*dt*0.06; s.y+=s.vy*dt*0.06;
-    const w=CELL*13*s.scale, h=LINEH*8*s.scale;
+    // dimensiones reales del bloque (ancho char ~0.6*fontpx en monospace)
+    const w=SK_COLS*CELL*0.6*s.scale, h=SK_ROWS*LINEH*s.scale;
     if(s.y>cv.height+h){s.y=-h;s.x=Math.random()*cv.width;}
     if(s.x>cv.width+w){s.x=-w;} if(s.x<-w){s.x=cv.width+w;}
-    // mandibula
+    // mandibula: alterna frame A (cerrada) / B (abierta)
     s.jawT+=dt; if(s.jawT>=s.jawSpeed){s.jawT=0;s.jaw^=1;}
     const frame=s.jaw?SKULL_B:SKULL_A;
-    // color monocromo, tinte muy ocasional
-    let col='rgba(215,215,215,0.30)';
-    if(s.tint==='cyan')col='rgba(99,210,232,0.30)';
-    else if(s.tint==='red')col='rgba(226,59,47,0.28)';
+    // color monocromo con opacidad por profundidad; tinte muy ocasional
+    const a=s.alpha;
+    let col='rgba(215,215,215,'+a+')';
+    if(s.tint==='cyan')col='rgba(99,210,232,'+a+')';
+    else if(s.tint==='red')col='rgba(226,59,47,'+(a*0.95)+')';
     cx.fillStyle=col;
     cx.font=(CELL*s.scale)+'px "Share Tech Mono", monospace';
     for(let i=0;i<frame.length;i++)
@@ -283,24 +361,48 @@ function push(text,cls){const div=document.createElement('div');
 function clearOut(){out.innerHTML='';}
 
 const targetEl=document.getElementById('target'),portsEl=document.getElementById('ports');
-const portsLbl=document.getElementById('portslbl'),runBtn=document.getElementById('runbtn');
+const runBtn=document.getElementById('runbtn');
 let mode='netscan';
+
+// Muestra/oculta cada par label+input segun la operacion elegida.
+function showFields(m){
+  const F={target:['netscan','portscan'],ports:['portscan'],
+           bssid:['deauth'],client:['deauth'],count:['deauth'],ssid:['eviltwin']};
+  for(const base in F){
+    const show=F[base].includes(m);
+    const lbl=document.getElementById(base+'lbl'),inp=document.getElementById(base);
+    if(lbl)lbl.style.display=show?'':'none';
+    if(inp)inp.style.display=show?'':'none';
+  }
+}
+const OPNAME={netscan:'ESCANEO DE RED',portscan:'ESCANEO DE PUERTOS',
+  deauth:'DEAUTH WIFI',eviltwin:'EVIL TWIN',wifite:'WIFITE AUTO'};
+
 document.querySelectorAll('.item').forEach(el=>{
   el.addEventListener('click',()=>{
     const op=el.dataset.op;
-    if(el.classList.contains('locked')){push('[!] Módulo WiFi no implementado — requiere adaptador en modo monitor','warn');return;}
+    // Acciones inmediatas (no usan EJECUTAR):
     if(op==='clear'){clearOut();return;}
     if(op==='status'){doStatus();return;}
     if(op==='wifiscan'){startWifiScan();return;}
+    // Modos que se arman y esperan EJECUTAR: netscan/portscan/deauth/eviltwin/wifite
     document.querySelectorAll('.item').forEach(i=>i.classList.remove('active'));
     el.classList.add('active');mode=op;
-    const isPort=op==='portscan';
-    portsEl.style.display=portsLbl.style.display=isPort?'':'none';
-    push('[*] Operación seleccionada: '+(isPort?'ESCANEO DE PUERTOS':'ESCANEO DE RED'),'sys');
+    showFields(op);
+    const off=el.classList.contains('off');
+    push('[*] Operación seleccionada: '+OPNAME[op]+(off?'  [OFENSIVA — solo redes autorizadas]':''),off?'warn':'sys');
+    // deauth / evil twin: ofrecer los objetivos ya descubiertos para elegir
+    if(op==='deauth'||op==='eviltwin')loadTargets(op);
   });
 });
 
-runBtn.addEventListener('click',runScan);
+// EJECUTAR despacha segun el modo activo.
+runBtn.addEventListener('click',()=>{
+  if(mode==='netscan'||mode==='portscan')return runScan();
+  if(mode==='deauth')return startDeauth();
+  if(mode==='eviltwin')return startEvilTwin();
+  if(mode==='wifite')return startWifite();
+});
 document.getElementById('stopbtn').addEventListener('click',abortScan);
 function setRunning(on){running=on;runBtn.style.display=on?'none':'';
   document.getElementById('stopbtn').style.display=on?'':'none';}
@@ -344,6 +446,160 @@ function simulateWifi(){
     push(lines[i][0],lines[i][1]);i++;},300);
 }
 
+/* ============ SELECTOR DE OBJETIVOS ============ */
+/* Al elegir deauth/evil twin, trae los AP del ultimo reconocimiento WiFi
+   (/api/wifi/targets) y los muestra clickeables. Un click rellena BSSID/SSID
+   (y ofrece los clientes del AP para el deauth), asi el usuario no tipea MACs. */
+const DEMO_TARGETS={redes:[
+  {power:-42,canal:'11',nivel:'OK',      essid:'MOVISTAR-WIFI6',    bssid:'AC:22:0B:AA:11:01'},
+  {power:-58,canal:'1', nivel:'DEBIL',   essid:'Fibertel WiFi695',  bssid:'F8:8E:85:BB:22:02'},
+  {power:-64,canal:'5', nivel:'OK',      essid:'Telecentro-6456',   bssid:'C0:FF:EE:CC:33:03'},
+  {power:-80,canal:'6', nivel:'CRITICO', essid:'Personal Wifi Zone',bssid:'00:1A:2B:DD:44:04'}],
+  clientes:[
+  {station:'DE:AD:BE:EF:00:11',packets:142,bssid:'AC:22:0B:AA:11:01'},
+  {station:'DE:AD:BE:EF:00:22',packets:37, bssid:'AC:22:0B:AA:11:01'},
+  {station:'A1:B2:C3:D4:E5:F6',packets:88, bssid:'F8:8E:85:BB:22:02'}]};
+
+async function loadTargets(kind){
+  clearOut();
+  push('[*] '+OPNAME[kind]+' — elegí un objetivo de la lista:','warn');
+  let data;
+  if(DEMO){data=DEMO_TARGETS;}
+  else{
+    try{const r=await fetch('/api/wifi/targets');data=await r.json();}
+    catch(e){push('[ERROR] No se pudieron obtener objetivos del servidor','err');return;}
+  }
+  const redes=(data&&data.redes)||[];
+  const clientes=(data&&data.clientes)||[];
+  if(!redes.length){
+    push('[!] No hay redes en memoria. Corré primero RECONOCIMIENTO WIFI (04).','warn');
+    const b=document.createElement('button');b.className='tgtbtn';
+    b.textContent='▸ EJECUTAR RECONOCIMIENTO WIFI AHORA';
+    b.onclick=()=>document.querySelector('.item[data-op="wifiscan"]').click();
+    out.appendChild(b);return;
+  }
+  redes.forEach(r=>{
+    const row=document.createElement('div');row.className='ln tgt';
+    row.textContent='  ▸ '+String(r.power).padStart(4)+'dBm  CH'+String(r.canal).padStart(2)
+      +'  '+String(r.nivel||'').padEnd(9)+' '+String(r.essid||'').slice(0,20).padEnd(20)+'  '+r.bssid;
+    row.onclick=()=>pickTarget(kind,r,clientes);
+    out.appendChild(row);
+  });
+  out.scrollTop=0;
+}
+
+function pickTarget(kind,r,clientes){
+  if(kind==='eviltwin'){
+    document.getElementById('ssid').value=(r.essid==='<oculta>')?'':r.essid;
+    push('[OK] Objetivo → SSID "'+r.essid+'". Presioná EJECUTAR.','sys');
+    return;
+  }
+  // deauth: fija el AP y ofrece sus clientes (opcional)
+  document.getElementById('bssid').value=r.bssid;
+  push('[OK] Objetivo → AP '+(r.essid||'')+' ['+r.bssid+']','sys');
+  const cli=clientes.filter(c=>(c.bssid||'').toUpperCase()===r.bssid.toUpperCase());
+  if(cli.length){
+    push('    Clientes asociados (opcional — o dejá broadcast):','');
+    cli.forEach(c=>{
+      const row=document.createElement('div');row.className='ln tgt';
+      row.textContent='      • '+c.station+'   ('+c.packets+' pkts)';
+      row.onclick=()=>{document.getElementById('client').value=c.station;
+        push('[OK] Cliente → '+c.station,'sys');};
+      out.appendChild(row);
+    });
+  }else{
+    document.getElementById('client').value='FF:FF:FF:FF:FF:FF';
+    push('    (sin clientes detectados — se usará broadcast)','');
+  }
+  push('    Ajustá TRAMAS y presioná EJECUTAR.','');
+}
+
+/* ============ OPERACIONES OFENSIVAS (redes autorizadas) ============ */
+/* Cada una postea a su endpoint y engancha el mismo stream SSE. Evil twin
+   y wifite corren indefinido: se cortan con ABORTAR (→ /api/stop). */
+async function startDeauth(){
+  const bssid=document.getElementById('bssid').value.trim();
+  if(!bssid){push('[ERROR] Se requiere el BSSID del AP objetivo','err');return;}
+  const client=document.getElementById('client').value.trim()||'FF:FF:FF:FF:FF:FF';
+  const count=document.getElementById('count').value.trim()||'20';
+  clearOut();setRunning(true);
+  push('[*] DEAUTH → AP '+bssid+' | cliente '+client+' | '+count+' tramas','warn');
+  push('[!] Operación ofensiva — asegurate de tener autorización sobre esta red','warn');
+  if(DEMO){simulateDeauth(bssid,client,count);return;}
+  try{
+    const r=await fetch('/api/wifi/deauth',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({bssid,client,count})});
+    const j=await r.json();
+    if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
+    openStream();
+  }catch(e){push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateDeauth(bssid,client,count);}
+}
+
+async function startEvilTwin(){
+  const ssid=document.getElementById('ssid').value.trim();
+  if(!ssid){push('[ERROR] Se requiere el SSID a clonar','err');return;}
+  clearOut();setRunning(true);
+  push('[*] EVIL TWIN → clonando "'+ssid+'" en canal 6','warn');
+  push('[!] El AP falso corre hasta que presiones ABORTAR','warn');
+  if(DEMO){simulateEvilTwin(ssid);return;}
+  try{
+    const r=await fetch('/api/wifi/eviltwin',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ssid})});
+    const j=await r.json();
+    if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
+    openStream();
+  }catch(e){push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateEvilTwin(ssid);}
+}
+
+async function startWifite(){
+  clearOut();setRunning(true);
+  push('[*] WIFITE AUTO → auditoría automatizada en wlan2','warn');
+  push('[!] Corre hasta terminar o hasta que presiones ABORTAR','warn');
+  if(DEMO){simulateWifite();return;}
+  try{
+    const r=await fetch('/api/wifi/handshake',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:'{}'});
+    const j=await r.json();
+    if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
+    openStream();
+  }catch(e){push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateWifite();}
+}
+
+function simulateDeauth(bssid,client,count){
+  const L=[['[*] Iniciando inyección de paquetes deauth en wlan2...','sys'],
+    ['[OK] Inyectando '+count+' tramas de desautenticación...','ok'],
+    ['    Objetivo AP: '+bssid+' | Cliente: '+client,''],['',''],
+    ['12:00:01  Sending 64 directed DeAuth (code 7). STMAC: ['+client+']','down'],
+    ['12:00:02  Sending 64 directed DeAuth (code 7). STMAC: ['+client+']','down'],
+    ['[OK] Ataque de desautenticación finalizado.','ok'],['── PROCESO FINALIZADO ──','sys']];
+  let i=0;const t=setInterval(()=>{if(i>=L.length){clearInterval(t);setRunning(false);return;}
+    push(L[i][0],L[i][1]);i++;},350);
+}
+function simulateEvilTwin(ssid){
+  const L=[['[*] Configurando entorno para Punto de Acceso Falso...','sys'],
+    ['[OK] Archivo de configuración temporal montado en /tmp/hostapd.conf','ok'],
+    ['[OK] Desplegando red gemela: [ '+ssid+' ] en canal 6...','ok'],
+    ['[*] Presioná ABORTAR para apagar el punto de acceso.','sys'],['',''],
+    ['Configuration file: /tmp/hostapd.conf','down'],
+    ['wlan2: interface state UNINITIALIZED->ENABLED','down'],
+    ['wlan2: AP-ENABLED','up']];
+  let i=0;const t=setInterval(()=>{if(i>=L.length){clearInterval(t);return;}
+    push(L[i][0],L[i][1]);i++;},350);   // queda "corriendo" hasta ABORTAR
+}
+function simulateWifite(){
+  const L=[['[*] Iniciando auditoría automatizada en la interfaz wlan2...','sys'],
+    ['[OK] Interfaz wlan2 establecida en modo monitor.','ok'],
+    ['[*] Lanzando Wifite en segundo plano...','sys'],['',''],
+    ['   NUM  ESSID              CH  ENCR  POWER  WPS  CLIENT','down'],
+    ['   1    MOVISTAR-WIFI6     11  WPA2  -42db  no   1','down'],
+    ['   2    Fibertel WiFi695    1  WPA2  -68db  yes  0','down'],
+    ['[+] Capturando handshake de MOVISTAR-WIFI6...','sys'],
+    ['[!] La sesión finalizó sin claves descifradas (Handshakes almacenados).','warn'],
+    ['[OK] Proceso finalizado. Hardware restaurado.','ok'],['── PROCESO FINALIZADO ──','sys']];
+  let i=0;const t=setInterval(()=>{if(i>=L.length){clearInterval(t);setRunning(false);return;}
+    push(L[i][0],L[i][1]);i++;},380);
+}
+
 async function runScan(){
   const target=targetEl.value.trim();
   if(!target){push('[ERROR] Se requiere un objetivo','err');return;}
@@ -367,7 +623,13 @@ function openStream(){
   currentSource.onerror=()=>{push('[!] Stream interrumpido','warn');closeStream();};
 }
 function closeStream(){if(currentSource){currentSource.close();currentSource=null;}setRunning(false);}
-function abortScan(){push('[!] Operación abortada por el usuario','warn');closeStream();}
+function abortScan(){
+  push('[!] Enviando señal de aborto...','warn');
+  // /api/stop mata el proceso ofensivo en el server (deauth/eviltwin/wifite).
+  // Para los escaneos nmap responde 'idle' y solo cerramos el stream local.
+  if(!DEMO){fetch('/api/stop',{method:'POST'}).catch(()=>{});}
+  closeStream();
+}
 
 function simulate(target){
   const lines=[
