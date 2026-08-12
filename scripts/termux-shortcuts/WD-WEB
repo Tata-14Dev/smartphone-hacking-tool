@@ -1,0 +1,5 @@
+#!/data/data/com.termux/files/usr/bin/bash
+am start -a android.intent.action.VIEW -d "http://localhost:5001" >/dev/null 2>&1 \
+  && echo "Abriendo http://localhost:5001 ..." \
+  || echo "Abrí manualmente http://localhost:5001 en el navegador"
+sleep 1
