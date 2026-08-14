@@ -230,8 +230,18 @@ def wifi_deauth():
     count = str(data.get("count", "20"))
     if not bssid:
         return jsonify({"error": "Se requiere el BSSID de la red objetivo"}), 400
-    # Orden posicional esperado por el script: bssid, client, count
-    launch_asynchronous_attack("wifi_deauth.sh", [bssid, client, count])
+    # Canal del AP segun el ULTIMO scan. aireplay-ng NO hopea de canal: si la
+    # interfaz no esta fijada en el canal del objetivo, las tramas no llegan y
+    # nadie se desconecta. Lo buscamos por BSSID y se lo pasamos al script.
+    # El front puede mandarlo tambien (data['channel']); si no, lo deducimos.
+    channel = str(data.get("channel", "")).strip()
+    if not channel:
+        for red in wifi.last_result.get("redes", []):
+            if str(red.get("bssid", "")).upper() == str(bssid).upper():
+                channel = str(red.get("canal", "")).strip()
+                break
+    # Orden posicional esperado por el script: bssid, client, count, channel
+    launch_asynchronous_attack("wifi_deauth.sh", [bssid, client, count, channel])
     return jsonify({"status": "started", "message": f"Deauth lanzado contra AP {bssid}"})
 
 
