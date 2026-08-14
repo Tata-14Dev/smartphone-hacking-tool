@@ -2,55 +2,45 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>WATCHDOG // ACCESS TERMINAL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* monocromo: negro / gris / blanco. cian y rojo SOLO como acento ocasional */
-    --bg:#050505; --bg2:#0c0c0c; --panel:rgba(12,12,12,.58);
+    --bg:#050505; --bg2:#0c0c0c; --panel:rgba(12,12,12,.72);
     --edge:#242424; --ink:#e2e2e2; --dim:#6a6a6a; --gray:#8c8c8c; --white:#f4f4f4;
-    --cyan:#63d2e8; --cyan-dim:#33454a; --red:#e23b2f;
+    --cyan:#63d2e8; --cyan-dim:#33454a; --red:#e23b2f; --red-lit:#ff6a5f;
     --mono:'Share Tech Mono',monospace; --disp:'Chakra Petch',sans-serif;
+    --appw:540px; --hdr:52px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{background:var(--bg);color:var(--ink);font-family:var(--mono);
     overflow:hidden;position:relative;-webkit-font-smoothing:none}
+
+  /* ---------- FONDOS / OVERLAYS ---------- */
   #noise{position:fixed;inset:0;z-index:0;opacity:.9}
   .scan{position:fixed;inset:0;z-index:40;pointer-events:none;
-    background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.30) 3px,rgba(0,0,0,0) 4px);
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.28) 3px,rgba(0,0,0,0) 4px);
     mix-blend-mode:multiply}
   .vign{position:fixed;inset:0;z-index:41;pointer-events:none;
-    background:radial-gradient(ellipse at center,rgba(0,0,0,0) 60%,rgba(0,0,0,.42) 100%)}
+    background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.5) 100%)}
   .flicker{position:fixed;inset:0;z-index:42;pointer-events:none;
     background:rgba(255,255,255,.015);animation:flick 8s infinite steps(1)}
   @keyframes flick{0%,96%,100%{opacity:0}97%{opacity:.5}98%{opacity:0}99%{opacity:.3}}
   :focus-visible{outline:1px solid var(--white);outline-offset:2px}
 
-  /* emblema circular (monocromo, un aro apenas cian) */
-  .emblem{position:fixed;top:50%;right:-6vw;transform:translateY(-50%);
-    width:60vh;height:60vh;z-index:1;opacity:.4;pointer-events:none}
-  .ring{position:absolute;inset:0;border-radius:50%;border:1px solid #2a2a2a}
-  .ring.r1{animation:spin 40s linear infinite;border-style:dashed;border-color:#333}
-  .ring.r2{inset:8%;animation:spin 26s linear infinite reverse;border-color:#2a2a2a}
-  .ring.r3{inset:20%;border-style:dotted;border-color:var(--cyan-dim);animation:spin 54s linear infinite}
-  .ring.r4{inset:33%;border:1px solid #202020}
-  .core{position:absolute;inset:41%;border-radius:50%;
-    background:radial-gradient(circle,rgba(255,255,255,.05),transparent 70%);
-    display:flex;align-items:center;justify-content:center;
-    color:var(--gray);font-size:1.3vh;text-align:center;line-height:1.1;letter-spacing:1px}
-  @keyframes spin{to{transform:rotate(360deg)}}
+  /* ---------- CONTENEDOR APP (centrado, ancho de telefono) ---------- */
+  .app{position:relative;z-index:10;max-width:var(--appw);margin:0 auto;
+    height:100vh;height:100dvh;display:flex;flex-direction:column;
+    background:linear-gradient(rgba(5,5,5,.30),rgba(5,5,5,.55));
+    border-left:1px solid var(--edge);border-right:1px solid var(--edge)}
 
-  .wrap{position:relative;z-index:10;height:100%;
-    display:grid;grid-template-columns:minmax(300px,38%) 1fr;
-    grid-template-rows:auto 1fr auto}
-
-  header{grid-column:1/3;display:flex;justify-content:space-between;align-items:center;
-    padding:18px 26px;border-bottom:1px solid var(--edge)}
-  .brand{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:3px;color:var(--white)}
+  header{flex:0 0 var(--hdr);display:flex;justify-content:space-between;align-items:center;
+    padding:0 16px;border-bottom:1px solid var(--edge);background:rgba(5,5,5,.55);backdrop-filter:blur(6px)}
+  .brand{font-family:var(--disp);font-weight:700;font-size:18px;letter-spacing:2px;color:var(--white)}
   .brand b{color:var(--gray)}
   .brand .glitch{position:relative;display:inline-block}
   .brand .glitch::before,.brand .glitch::after{content:attr(data-t);position:absolute;left:0;top:0;overflow:hidden;width:100%}
@@ -62,143 +52,297 @@
   @keyframes gl2{0%,92%,100%{clip-path:inset(0 0 100% 0);transform:translate(0)}
     93%{clip-path:inset(50% 0 20% 0);transform:translate(2px,0)}
     96%{clip-path:inset(10% 0 70% 0);transform:translate(-2px,0)}}
-  .conn{font-size:12px;letter-spacing:1px;color:var(--dim);display:flex;gap:16px;align-items:center}
-  .dot{width:9px;height:9px;border-radius:50%;background:var(--red);
+  .conn{font-size:11px;letter-spacing:1px;color:var(--dim);display:flex;gap:12px;align-items:center}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--red);
     box-shadow:0 0 8px var(--red);display:inline-block;margin-right:6px}
   .dot.on{background:var(--white);box-shadow:0 0 8px var(--white);animation:pulse 1.6s infinite}
   @keyframes pulse{50%{opacity:.35}}
 
-  .menu{padding:34px 26px 20px;display:flex;flex-direction:column;gap:2px}
-  .menu .eyebrow{font-size:11px;letter-spacing:3px;color:var(--dim);margin-bottom:18px}
-  .item{position:relative;cursor:pointer;padding:14px 6px 12px;display:flex;align-items:baseline;
-    justify-content:flex-end;gap:12px;font-family:var(--disp);font-weight:600;font-size:19px;
-    letter-spacing:1px;color:var(--ink);text-align:right;transition:color .12s}
-  .item .lead{flex:1;border-bottom:1px dotted var(--dim);transform:translateY(-4px);opacity:.5}
-  .item .idx{font-family:var(--mono);font-size:12px;color:var(--dim)}
-  .item:hover{color:var(--white)}
-  .item:hover::before{content:"";position:absolute;inset:0;
-    background:linear-gradient(90deg,transparent,rgba(244,244,244,.08) 30%,rgba(244,244,244,.14));z-index:-1}
-  .item:hover .lead{border-color:var(--white);opacity:1}
-  .item.locked{color:var(--dim);cursor:not-allowed}
-  .item.locked:hover{color:var(--dim)}
-  .item.locked .tag{font-family:var(--mono);font-size:10px;color:var(--red);
-    border:1px solid var(--red);padding:1px 5px;letter-spacing:1px;transform:translateY(-3px)}
-  .item.active{color:var(--white)}
-  .item.active .lead{border-color:var(--white);opacity:1}
-  /* operaciones ofensivas: acento rojo apenas perceptible */
-  .item.off .idx{color:var(--red);opacity:.8}
-  .item.off.active{color:var(--red)}
-  .item.off.active .lead{border-color:var(--red)}
+  /* ---------- ESCENARIO / CARRUSEL ---------- */
+  .stage{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .eyebrow{flex:0 0 auto;font-size:11px;letter-spacing:3px;color:var(--dim);padding:14px 20px 6px}
+  .eyebrow.off{color:var(--red)}
+  .decks{flex:1 1 auto;min-height:0;position:relative}
+  .track{position:absolute;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .track::-webkit-scrollbar{display:none}
+  .track[hidden]{display:none}
+  .card{flex:0 0 100%;scroll-snap-align:center;height:100%;overflow-y:auto;
+    padding:18px 22px 26px;display:flex;flex-direction:column;gap:14px}
+  .card::-webkit-scrollbar{width:6px}.card::-webkit-scrollbar-thumb{background:#2c2c2c}
+  .ctop{display:flex;align-items:center;gap:10px}
+  .cidx{font-family:var(--disp);font-weight:700;font-size:13px;color:#0a0a0a;background:var(--gray);padding:2px 9px}
+  .card.off .cidx{background:var(--red);color:#150302}
+  .cstat{font-size:10px;letter-spacing:2px;color:var(--dim);border:1px solid var(--edge);padding:2px 8px}
+  .card.off .cstat{color:var(--red-lit);border-color:#4a2320}
+  .card h2{font-family:var(--disp);font-weight:700;font-size:25px;letter-spacing:1px;color:var(--white);line-height:1.05}
+  .card.off h2{color:#ffe9e7}
+  .cdesc{font-size:13px;line-height:1.55;color:var(--gray)}
+  .warnrow{font-size:11px;line-height:1.4;color:var(--red-lit);border-left:2px solid var(--red);
+    padding:6px 0 6px 10px;letter-spacing:.5px}
+  label{display:flex;flex-direction:column;gap:6px;font-size:10px;letter-spacing:2px;color:var(--dim)}
+  label input{background:#0a0a0a;border:1px solid var(--edge);color:var(--white);
+    font-family:var(--mono);font-size:16px;padding:12px;outline:none}
+  label input:focus{border-color:var(--gray)}
+  .spacer{flex:1 1 auto;min-height:8px}
+  .btn{font-family:var(--disp);font-weight:600;letter-spacing:2px;cursor:pointer;transition:.12s;
+    -webkit-tap-highlight-color:transparent}
+  .exec{background:transparent;border:1px solid var(--gray);color:var(--white);font-size:15px;padding:16px}
+  .exec:active{background:var(--white);color:#0a0a0a}
+  .card.off .exec{border-color:var(--red);color:var(--red-lit)}
+  .card.off .exec:active{background:var(--red);color:#150302}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
 
-  .console{margin:22px 26px 22px 8px;border:1px solid var(--edge);background:var(--panel);
-    display:flex;flex-direction:column;min-height:0}
-  .cbar{display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--edge);flex-wrap:wrap}
-  .cbar .lbl{font-size:11px;color:var(--dim);letter-spacing:1px}
-  .cbar input{background:#0a0a0a;border:1px solid var(--edge);color:var(--white);
-    font-family:var(--mono);font-size:13px;padding:7px 9px;outline:none;width:150px}
-  .cbar input:focus{border-color:var(--gray)}
-  .cbar .run{margin-left:auto;background:transparent;border:1px solid var(--gray);color:var(--white);
-    font-family:var(--disp);font-weight:600;letter-spacing:2px;font-size:12px;padding:8px 16px;cursor:pointer;transition:.12s}
-  .cbar .run:hover{background:var(--white);color:#0a0a0a}
-  .cbar .run:disabled{opacity:.4;cursor:not-allowed;border-color:var(--dim);color:var(--dim)}
-  .cbar .stop{border-color:var(--red);color:var(--red)}
-  .cbar .stop:hover{background:var(--red);color:#150302}
+  /* selector de objetivos embebido en las cards ofensivas */
+  .tsel{border:1px solid var(--edge);background:#080808}
+  .tsel-head{display:flex;align-items:center;justify-content:space-between;
+    font-size:10px;letter-spacing:1px;color:var(--dim);padding:8px 10px;border-bottom:1px solid var(--edge)}
+  .tsel-head .rf{background:transparent;border:1px solid var(--edge);color:var(--gray);
+    padding:3px 9px;cursor:pointer;font-family:var(--mono);font-size:12px}
+  .tsel-head .rf:active{background:var(--gray);color:#0a0a0a}
+  .tlist{max-height:44vh;overflow-y:auto}
+  .tlist::-webkit-scrollbar{width:6px}.tlist::-webkit-scrollbar-thumb{background:#2c2c2c}
+  .net{border-bottom:1px solid #161616}
+  .net-row{padding:11px 10px;cursor:pointer;font-size:12px;color:var(--ink);
+    display:flex;align-items:center;gap:8px}
+  .net-row .chev{color:var(--dim);font-size:10px;transition:.15s}
+  .net.open .net-row .chev{transform:rotate(90deg)}
+  .net.sel .net-row{background:rgba(226,59,47,.14);color:#fff;
+    box-shadow:inset 2px 0 0 var(--red)}
+  .net-meta{color:var(--dim);font-size:10.5px}
+  .net-clients{display:none;background:#040404}
+  .net.open .net-clients{display:block}
+  .cli-row{padding:9px 10px 9px 26px;font-size:11.5px;color:var(--gray);cursor:pointer;
+    border-top:1px solid #111}
+  .cli-row:active{background:rgba(255,255,255,.04)}
+  .cli-row.sel{color:#fff;background:rgba(226,59,47,.12);box-shadow:inset 2px 0 0 var(--red)}
+  .cli-row.bcast{color:var(--dim);font-style:italic}
+  .tempty{padding:14px 12px;font-size:12px;color:var(--gray);line-height:1.6}
+  .selnow{font-size:11px;letter-spacing:1px;color:var(--red-lit);padding:2px 0}
+  .selnow b{color:#fff}
 
-  .out{flex:1;overflow-y:auto;padding:12px 14px;font-size:12.5px;line-height:1.5;min-height:0}
-  .out .ln{white-space:pre-wrap;word-break:break-all;color:var(--gray)}
-  .out .sys{color:var(--cyan)}
-  .out .ok{color:var(--white)}
-  .out .warn{color:var(--ink)}
-  .out .err{color:var(--red)}
-  .out .up{color:var(--white)}
-  .out .down{color:var(--dim)}
-  .out::-webkit-scrollbar{width:8px}
-  .out::-webkit-scrollbar-thumb{background:#333}
-  /* filas de objetivos clickeables (deauth / evil twin) */
-  .out .tgt{cursor:pointer;color:var(--ink);border-left:2px solid transparent;
-    padding-left:4px;transition:.1s}
-  .out .tgt:hover{color:var(--white);border-left-color:var(--red);background:rgba(226,59,47,.08)}
-  .tgtbtn{display:inline-block;margin:8px 0;background:transparent;border:1px solid var(--gray);
-    color:var(--white);font-family:var(--disp);font-weight:600;letter-spacing:1px;
-    padding:8px 12px;cursor:pointer;font-size:12px}
-  .tgtbtn:hover{background:var(--white);color:#0a0a0a}
+  .dots{flex:0 0 auto;display:flex;gap:7px;justify-content:center;padding:9px 0 5px}
+  .dot2{width:7px;height:7px;border-radius:50%;background:#2c2c2c;transition:.22s}
+  .dot2.on{background:var(--white);width:18px;border-radius:3px}
+  .decks.off ~ .dots .dot2.on,.eyebrow.off ~ .decks{}
 
-  footer{grid-column:1/3;border-top:1px solid var(--edge);overflow:hidden;padding:9px 0;background:#080808}
-  .ticker{white-space:nowrap;font-size:11px;letter-spacing:2px;color:var(--dim);animation:slide 28s linear infinite}
+  /* ---------- TICKER ---------- */
+  .ticker-wrap{flex:0 0 auto;overflow:hidden;border-top:1px solid var(--edge);background:#080808;padding:6px 0}
+  .ticker{white-space:nowrap;font-size:10px;letter-spacing:2px;color:var(--dim);animation:slide 30s linear infinite}
   .ticker b{color:var(--gray)}
   @keyframes slide{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
 
+  /* ---------- TABS ---------- */
+  .tabs{flex:0 0 auto;display:flex;flex-direction:column;border-top:1px solid var(--edge);
+    background:rgba(8,8,8,.92);padding-bottom:env(safe-area-inset-bottom)}
+  .tabrow{display:flex}
+  .tab{flex:1;background:transparent;border:none;color:var(--dim);font-family:var(--disp);font-weight:600;
+    letter-spacing:1px;font-size:11px;padding:15px 4px;cursor:pointer;position:relative;
+    -webkit-tap-highlight-color:transparent}
+  .tab[data-cat].active{color:var(--white)}
+  .tab[data-cat].active::after{content:"";position:absolute;top:0;left:22%;right:22%;height:2px;background:var(--white)}
+  .tab.off.active{color:var(--red)}
+  .tab.off.active::after{background:var(--red)}
+  /* CONSOLA: barra completa en su propia fila; se arrastra hacia arriba como bandeja */
+  .consola-handle{width:100%;border:none;border-top:1px solid var(--edge);
+    background:rgba(14,14,14,.7);color:var(--dim);font-family:var(--disp);font-weight:600;
+    letter-spacing:2px;font-size:11px;padding:15px 4px 12px;cursor:grab;position:relative;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    -webkit-tap-highlight-color:transparent;touch-action:none}
+  .consola-handle:active{cursor:grabbing;background:rgba(20,20,20,.8)}
+  .consola-handle .hgrip{position:absolute;top:5px;left:50%;transform:translateX(-50%);
+    width:40px;height:4px;border-radius:2px;background:#3a3a3a;transition:.2s}
+  .consola-handle.active .hgrip{background:var(--gray)}
+  .consola-handle.active{color:var(--white)}
+  .consola-handle .caret{font-size:10px;opacity:.6}
+  .consola-handle.active .caret{transform:rotate(180deg);display:inline-block}
+  .consola-handle .bdg{width:7px;height:7px;border-radius:50%;background:var(--red);
+    box-shadow:0 0 6px var(--red);display:none}
+  .consola-handle.busy .bdg{display:inline-block;animation:pulse 1s infinite}
+  .consola-handle.busy{color:var(--red-lit)}
+
+  /* ---------- CONSOLA (DRAWER) ---------- */
+  .backdrop{position:fixed;inset:0;z-index:48;background:rgba(0,0,0,.55);opacity:0;
+    pointer-events:none;transition:opacity .28s}
+  .backdrop.open{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;left:50%;bottom:0;width:min(var(--appw),100%);height:80vh;height:80dvh;z-index:49;
+    transform:translateX(-50%) translateY(101%);transition:transform .3s cubic-bezier(.2,.8,.2,1);
+    background:#070707;border:1px solid var(--edge);border-bottom:none;
+    display:flex;flex-direction:column;box-shadow:0 -20px 60px rgba(0,0,0,.7)}
+  .drawer.open{transform:translateX(-50%) translateY(0)}
+  .grip{flex:0 0 auto;display:flex;justify-content:center;padding:8px 0 2px}
+  .grip span{width:42px;height:4px;border-radius:2px;background:#333}
+  .chead{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 14px 12px;border-bottom:1px solid var(--edge)}
+  .chead .t{font-family:var(--disp);font-weight:600;letter-spacing:2px;color:var(--white);flex:1;font-size:14px}
+  .chead .st{font-size:10px;letter-spacing:1px;color:var(--dim)}
+  .cbtn{background:transparent;border:1px solid var(--gray);color:var(--white);font-family:var(--disp);
+    font-weight:600;letter-spacing:1px;font-size:11px;padding:8px 12px;cursor:pointer}
+  .cbtn:active{background:var(--white);color:#0a0a0a}
+  .cbtn.stop{border-color:var(--red);color:var(--red)}
+  .cbtn.stop:active{background:var(--red);color:#150302}
+  .out{flex:1;overflow-y:auto;padding:12px 14px calc(20px + env(safe-area-inset-bottom));
+    font-size:12.5px;line-height:1.5;min-height:0}
+  .out .ln{white-space:pre-wrap;word-break:break-all;color:var(--gray)}
+  .out .sys{color:var(--cyan)} .out .ok{color:var(--white)} .out .warn{color:var(--ink)}
+  .out .err{color:var(--red)} .out .up{color:var(--white)} .out .down{color:var(--dim)}
+  .out::-webkit-scrollbar{width:8px}.out::-webkit-scrollbar-thumb{background:#333}
+  .out .tgt{cursor:pointer;color:var(--ink);border-left:2px solid transparent;padding-left:4px;transition:.1s}
+  .out .tgt:active{color:var(--white);border-left-color:var(--red);background:rgba(226,59,47,.08)}
+  .tgtbtn{display:inline-block;margin:8px 0;background:transparent;border:1px solid var(--gray);
+    color:var(--white);font-family:var(--disp);font-weight:600;letter-spacing:1px;padding:10px 14px;cursor:pointer;font-size:12px}
+  .tgtbtn:active{background:var(--white);color:#0a0a0a}
+
+  /* ---------- BOOT ---------- */
   #boot{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;
-    justify-content:center;flex-direction:column;font-family:var(--mono);color:var(--white);font-size:14px}
-  #boot pre{color:var(--white);font-size:11px;line-height:1.1}
+    justify-content:center;flex-direction:column;font-family:var(--mono);color:var(--white);font-size:14px;padding:20px}
+  #boot pre{color:var(--white);font-size:9px;line-height:1.1}
   #bootlog{margin-top:24px;min-height:120px;width:min(560px,86vw);color:var(--ink);font-size:12px}
   #bootlog .c{color:var(--gray)}
 
-  @media(max-width:820px){
-    .wrap{grid-template-columns:1fr;grid-template-rows:auto auto minmax(240px,1fr) auto}
-    .menu{grid-row:2}.console{grid-row:3;margin:12px}
-    .emblem{opacity:.16;right:-28vw;width:80vh}
-    header{padding:12px 16px}.brand{font-size:18px}
-    .menu{padding:16px 16px 6px;gap:0}.item{font-size:17px;padding:12px 4px}
-    .cbar input{width:calc(50% - 40px);flex:1;font-size:16px}
-    .cbar .run{font-size:13px;padding:9px 14px}.out{font-size:12px}
-  }
-  @media(max-width:480px){
-    .cbar{gap:6px}.cbar input{width:100%;flex:none}.cbar .lbl{width:100%}.item .idx{display:none}
-  }
+  /* desktop: apenas mas aire, mismo paradigma de app */
+  @media(min-width:560px){.card h2{font-size:28px}}
   @media(prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
 <body>
 <canvas id="noise"></canvas>
 <div class="scan"></div><div class="vign"></div><div class="flicker"></div>
-<div class="emblem">
-  <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="ring r4"></div>
-  <div class="core">WD//<br>NODE</div>
-</div>
 
-<div class="wrap">
+<div class="app">
   <header>
-    <div class="brand">&gt; WATCH<b>_</b><span class="glitch" data-t="DOG">DOG</span> <b>//</b></div>
+    <div class="brand">&gt; WATCH<b>_</b><span class="glitch" data-t="DOG">DOG</span></div>
     <div class="conn"><span id="connlbl"><span class="dot" id="dot"></span>ENLACE</span><span id="clock">--:--:--</span></div>
   </header>
 
-  <nav class="menu">
-    <div class="eyebrow">// SELECCIONAR OPERACIÓN</div>
-    <div class="item" data-op="netscan"><span class="idx">01</span><span class="lead"></span>ESCANEO DE RED</div>
-    <div class="item" data-op="portscan"><span class="idx">02</span><span class="lead"></span>ESCANEO DE PUERTOS</div>
-    <div class="item" data-op="status"><span class="idx">03</span><span class="lead"></span>ESTADO DEL SISTEMA</div>
-    <div class="item" data-op="wifiscan"><span class="idx">04</span><span class="lead"></span>RECONOCIMIENTO WIFI</div>
-    <div class="item off" data-op="deauth"><span class="idx">05</span><span class="lead"></span>DEAUTH WIFI</div>
-    <div class="item off" data-op="eviltwin"><span class="idx">06</span><span class="lead"></span>EVIL TWIN</div>
-    <div class="item off" data-op="wifite"><span class="idx">07</span><span class="lead"></span>WIFITE AUTO</div>
-    <div class="item" data-op="clear"><span class="idx">00</span><span class="lead"></span>LIMPIAR CONSOLA</div>
-  </nav>
+  <main class="stage">
+    <div class="eyebrow" id="cateyebrow">// RECONOCIMIENTO</div>
+    <div class="decks" id="decks">
 
-  <section class="console">
-    <div class="cbar">
-      <span class="lbl" id="targetlbl">OBJETIVO</span>
-      <input id="target" value="192.168.1.0/24" spellcheck="false">
-      <span class="lbl" id="portslbl" style="display:none">PUERTOS</span>
-      <input id="ports" value="1-1000" spellcheck="false" style="display:none">
-      <span class="lbl" id="bssidlbl" style="display:none">BSSID</span>
-      <input id="bssid" placeholder="AA:BB:CC:DD:EE:FF" spellcheck="false" style="display:none">
-      <span class="lbl" id="clientlbl" style="display:none">CLIENTE</span>
-      <input id="client" value="FF:FF:FF:FF:FF:FF" spellcheck="false" style="display:none">
-      <span class="lbl" id="countlbl" style="display:none">TRAMAS</span>
-      <input id="count" value="20" spellcheck="false" style="display:none">
-      <span class="lbl" id="ssidlbl" style="display:none">SSID</span>
-      <input id="ssid" placeholder="Red_a_clonar" spellcheck="false" style="display:none">
-      <button class="run" id="runbtn">EJECUTAR</button>
-      <button class="run stop" id="stopbtn" style="display:none">ABORTAR</button>
+      <!-- ===== RECON ===== -->
+      <div class="track" data-cat="recon">
+        <article class="card" data-op="netscan">
+          <div class="ctop"><span class="cidx">01</span><span class="cstat">RECON</span></div>
+          <h2>ESCANEO DE RED</h2>
+          <p class="cdesc">Barrido nmap (-sn) del rango. Descubre qué hosts están activos en la red.</p>
+          <label>OBJETIVO<input id="net_target" value="192.168.1.0/24" spellcheck="false"></label>
+          <div class="spacer"></div>
+          <button class="btn exec" data-op="netscan">▸ EJECUTAR</button>
+        </article>
+
+        <article class="card" data-op="portscan">
+          <div class="ctop"><span class="cidx">02</span><span class="cstat">RECON</span></div>
+          <h2>ESCANEO DE PUERTOS</h2>
+          <p class="cdesc">nmap -sV sobre un host: puertos abiertos y servicios/versiones.</p>
+          <label>OBJETIVO<input id="port_target" value="192.168.1.1" spellcheck="false"></label>
+          <label>PUERTOS<input id="ports" value="1-1000" spellcheck="false"></label>
+          <div class="spacer"></div>
+          <button class="btn exec" data-op="portscan">▸ EJECUTAR</button>
+        </article>
+
+        <article class="card" data-op="wifiscan">
+          <div class="ctop"><span class="cidx">04</span><span class="cstat">RECON</span></div>
+          <h2>RECONOCIMIENTO WIFI</h2>
+          <p class="cdesc">Escucha pasiva del aire (airodump, 30s). Redes cercanas, señal, canal y clientes. Alimenta el selector de objetivos de las ofensivas.</p>
+          <div class="spacer"></div>
+          <button class="btn exec" data-act="wifiscan">▸ ESCUCHAR AIRE (30s)</button>
+        </article>
+      </div>
+
+      <!-- ===== OFENSIVAS ===== -->
+      <div class="track" data-cat="off" hidden>
+        <article class="card off" data-op="deauth">
+          <div class="ctop"><span class="cidx">05</span><span class="cstat">OFENSIVA</span></div>
+          <h2>DEAUTH WIFI</h2>
+          <p class="cdesc">Elegí un AP de la lista y (opcional) uno de sus clientes. Inyecta tramas de desautenticación.</p>
+          <div class="warnrow">Solo sobre redes propias o con autorización expresa.</div>
+          <div class="tsel">
+            <div class="tsel-head"><span>OBJETIVOS · ÚLTIMO SCAN</span><button class="rf" data-rf="deauth">⟳</button></div>
+            <div class="tlist" id="tlist_deauth"></div>
+          </div>
+          <div class="selnow" id="sel_deauth">objetivo: <b>ninguno</b></div>
+          <label>BSSID<input id="bssid" placeholder="AA:BB:CC:DD:EE:FF" spellcheck="false"></label>
+          <label>CLIENTE<input id="client" value="FF:FF:FF:FF:FF:FF" spellcheck="false"></label>
+          <label>TRAMAS<input id="count" value="20" spellcheck="false"></label>
+          <div class="spacer"></div>
+          <button class="btn exec" data-op="deauth">▸ EJECUTAR</button>
+        </article>
+
+        <article class="card off" data-op="eviltwin">
+          <div class="ctop"><span class="cidx">06</span><span class="cstat">OFENSIVA</span></div>
+          <h2>EVIL TWIN</h2>
+          <p class="cdesc">Elegí un SSID de la lista para clonarlo con un AP falso (hostapd). Corre hasta que aprietes ABORTAR.</p>
+          <div class="warnrow">Solo sobre redes propias o de laboratorio autorizado.</div>
+          <div class="tsel">
+            <div class="tsel-head"><span>OBJETIVOS · ÚLTIMO SCAN</span><button class="rf" data-rf="eviltwin">⟳</button></div>
+            <div class="tlist" id="tlist_eviltwin"></div>
+          </div>
+          <div class="selnow" id="sel_eviltwin">objetivo: <b>ninguno</b></div>
+          <label>SSID<input id="ssid" placeholder="Red_a_clonar" spellcheck="false"></label>
+          <div class="spacer"></div>
+          <button class="btn exec" data-op="eviltwin">▸ EJECUTAR</button>
+        </article>
+
+        <article class="card off" data-op="wifite">
+          <div class="ctop"><span class="cidx">07</span><span class="cstat">OFENSIVA</span></div>
+          <h2>WIFITE AUTO</h2>
+          <p class="cdesc">Auditoría automatizada (wifite) sobre wlan2: opera sobre todas las redes al alcance, captura y prueba de handshakes. No requiere elegir objetivo. Cortá con ABORTAR.</p>
+          <div class="warnrow">Solo sobre redes propias o de laboratorio autorizado.</div>
+          <div class="spacer"></div>
+          <button class="btn exec" data-op="wifite">▸ EJECUTAR</button>
+        </article>
+      </div>
+
+      <!-- ===== SISTEMA ===== -->
+      <div class="track" data-cat="sys" hidden>
+        <article class="card" data-op="status">
+          <div class="ctop"><span class="cidx">03</span><span class="cstat">SISTEMA</span></div>
+          <h2>ESTADO DEL SISTEMA</h2>
+          <p class="cdesc">Chequeo rápido: enlace, nmap, módulo WiFi y scope autorizado.</p>
+          <div class="spacer"></div>
+          <button class="btn exec" data-act="status">▸ CONSULTAR</button>
+        </article>
+
+        <article class="card" data-op="clear">
+          <div class="ctop"><span class="cidx">00</span><span class="cstat">SISTEMA</span></div>
+          <h2>LIMPIAR CONSOLA</h2>
+          <p class="cdesc">Borra toda la salida de la consola.</p>
+          <div class="spacer"></div>
+          <button class="btn exec" data-act="clear">▸ LIMPIAR</button>
+        </article>
+      </div>
+
     </div>
-    <div class="out" id="out"></div>
-  </section>
+    <div class="dots" id="dots"></div>
+    <div class="ticker-wrap">
+      <div class="ticker">SISTEMA WATCHDOG · TERMINAL DE AUDITORÍA DE RED · <b>USO AUTORIZADO ÚNICAMENTE — REDES PROPIAS / LAB</b> · MÓDULO WIFI VÍA ADAPTADOR EXTERNO wlan2 · NMAP LISTO · SSE ACTIVO &nbsp;//&nbsp; USO AUTORIZADO ÚNICAMENTE ·</div>
+    </div>
+  </main>
 
-  <footer>
-    <div class="ticker">SISTEMA WATCHDOG · TERMINAL DE AUDITORÍA DE RED · <b>USO AUTORIZADO ÚNICAMENTE — REDES PROPIAS / LAB</b> · MÓDULO WIFI EN ESPERA DE ADAPTADOR EXTERNO · NMAP LISTO · SSE ACTIVO &nbsp;//&nbsp; SISTEMA WATCHDOG · TERMINAL DE AUDITORÍA DE RED · <b>USO AUTORIZADO ÚNICAMENTE</b> ·</div>
-  </footer>
+  <nav class="tabs">
+    <div class="tabrow">
+      <button class="tab active" data-cat="recon">RECON</button>
+      <button class="tab off" data-cat="off">OFENSIVAS</button>
+      <button class="tab" data-cat="sys">SISTEMA</button>
+    </div>
+    <button class="consola-handle" data-tab="console">
+      <span class="hgrip"></span><span class="caret">▲</span> CONSOLA<span class="bdg"></span>
+    </button>
+  </nav>
 </div>
+
+<!-- ===== DRAWER CONSOLA ===== -->
+<div class="backdrop" id="backdrop"></div>
+<section class="drawer" id="console">
+  <div class="grip"><span></span></div>
+  <div class="chead">
+    <span class="t">CONSOLA</span>
+    <span class="st" id="constat">idle</span>
+    <button class="cbtn stop" id="stopbtn" style="display:none">ABORTAR</button>
+    <button class="cbtn" id="clearbtn">LIMPIAR</button>
+    <button class="cbtn" id="closecon">▾</button>
+  </div>
+  <div class="out" id="out"></div>
+</section>
 
 <div id="boot">
   <pre>
@@ -214,14 +358,22 @@
 <script>
 const DEMO = location.protocol === 'file:';
 const out = document.getElementById('out');
-let currentSource = null, running = false;
+const drawer = document.getElementById('console');
+const backdrop = document.getElementById('backdrop');
+const stopBtn = document.getElementById('stopbtn');
+const constat = document.getElementById('constat');
+const dots = document.getElementById('dots');
+const cateyebrow = document.getElementById('cateyebrow');
+const consoleTab = document.querySelector('.consola-handle');
+let currentSource = null, running = false, mode = 'netscan';
+let lastWasScan = false;   // la ultima operacion fue un recon wifi? (para refrescar objetivos al terminar)
+let demoScanned = false;   // en modo demo: ya se corrio un recon? (asi la lista arranca vacia como en real)
+let simMode = DEMO;        // sin backend alcanzable → simulacion (se auto-activa si un fetch falla)
 
 setInterval(()=>{const d=new Date();
   document.getElementById('clock').textContent=d.toLocaleTimeString('es-AR',{hour12:false});},1000);
 
 /* ============ FONDO: CALAVERAS ASCII ANIMADAS ============ */
-/* Dos frames por calavera: mandibula cerrada (A) y abierta (B).
-   Cada calavera se desplaza en diagonal y alterna A/B (mueve la mandibula). */
 const SKULL_A=[
 "          ___-----------___          ",
 "      __--~~               ~~--__      ",
@@ -284,35 +436,30 @@ const SKULL_B=[
 "                 ~--___--~                "];
 
 const cv=document.getElementById('noise'),cx=cv.getContext('2d');
-const CELL=7, LINEH=7;                            // px por caracter / por linea (base)
-const SK_ROWS=SKULL_A.length;                     // filas de la calavera
-const SK_COLS=Math.max(...SKULL_A.map(l=>l.length)); // ancho en caracteres
+const CELL=7, LINEH=7;
+const SK_ROWS=SKULL_A.length;
+const SK_COLS=Math.max(...SKULL_A.map(l=>l.length));
 let skulls=[];
 function makeSkulls(){
-  // MUCHAS calaveras pero distinguibles: densidad alta + fuerte variacion de
-  // escala y opacidad. La opacidad depende del tamaño (efecto de profundidad:
-  // las grandes se ven "cerca"/mas nitidas, las chicas "lejos"/mas tenues),
-  // asi cada una se lee por separado en vez de fundirse en una mancha.
   const count=Math.min(64,Math.max(8,Math.floor((innerWidth*innerHeight)/42000)));
   skulls=[];
   for(let i=0;i<count;i++){
-    const dir=Math.random()>.5?1:-1;          // diagonal a der o izq
-    const scale=0.26+Math.random()*0.55;      // 0.26–0.81: rango amplio
-    const depth=(scale-0.26)/0.55;            // 0 (chica/lejos) .. 1 (grande/cerca)
+    const dir=Math.random()>.5?1:-1;
+    const scale=0.26+Math.random()*0.55;
+    const depth=(scale-0.26)/0.55;
     skulls.push({
       x:Math.random()*innerWidth,
       y:Math.random()*innerHeight,
-      vx:dir*(0.08+Math.random()*0.16+depth*0.06),  // las grandes van un toque mas rapido
+      vx:dir*(0.08+Math.random()*0.16+depth*0.06),
       vy:(0.05+Math.random()*0.10+depth*0.05),
       jaw:Math.random()>.5?1:0,
       jawT:Math.random()*1000,
-      jawSpeed:380+Math.random()*520,          // ms por apertura de mandibula
+      jawSpeed:380+Math.random()*520,
       scale:scale,
-      alpha:0.13+depth*0.27,                   // 0.13–0.40 segun profundidad
+      alpha:0.13+depth*0.27,
       tint:Math.random()<0.13?(Math.random()<0.5?'cyan':'red'):'gray'
     });
   }
-  // dibujar primero las chicas/tenues y encima las grandes/nitidas
   skulls.sort((a,b)=>a.scale-b.scale);
 }
 function sizeCanvas(){cv.width=innerWidth;cv.height=innerHeight;makeSkulls();}
@@ -323,16 +470,12 @@ function drawSkulls(now){
   const dt=now-last; last=now;
   cx.fillStyle='#050505'; cx.fillRect(0,0,cv.width,cv.height);
   for(const s of skulls){
-    // mover en diagonal
     s.x+=s.vx*dt*0.06; s.y+=s.vy*dt*0.06;
-    // dimensiones reales del bloque (ancho char ~0.6*fontpx en monospace)
     const w=SK_COLS*CELL*0.6*s.scale, h=SK_ROWS*LINEH*s.scale;
     if(s.y>cv.height+h){s.y=-h;s.x=Math.random()*cv.width;}
     if(s.x>cv.width+w){s.x=-w;} if(s.x<-w){s.x=cv.width+w;}
-    // mandibula: alterna frame A (cerrada) / B (abierta)
     s.jawT+=dt; if(s.jawT>=s.jawSpeed){s.jawT=0;s.jaw^=1;}
     const frame=s.jaw?SKULL_B:SKULL_A;
-    // color monocromo con opacidad por profundidad; tinte muy ocasional
     const a=s.alpha;
     let col='rgba(215,215,215,'+a+')';
     if(s.tint==='cyan')col='rgba(99,210,232,'+a+')';
@@ -346,7 +489,7 @@ function drawSkulls(now){
 }
 requestAnimationFrame(drawSkulls);
 
-/* ============ CONSOLA ============ */
+/* ============ CONSOLA (salida) ============ */
 function classify(t){
   if(/error|failed|fallo|down\]/i.test(t))return 'err';
   if(/Host is up|hosts up|\bup\b/i.test(t))return 'up';
@@ -359,64 +502,129 @@ function push(text,cls){const div=document.createElement('div');
   div.className='ln '+(cls||classify(text));div.textContent=text;
   out.appendChild(div);out.scrollTop=out.scrollHeight;}
 function clearOut(){out.innerHTML='';}
-
-const targetEl=document.getElementById('target'),portsEl=document.getElementById('ports');
-const runBtn=document.getElementById('runbtn');
-let mode='netscan';
-
-// Muestra/oculta cada par label+input segun la operacion elegida.
-function showFields(m){
-  const F={target:['netscan','portscan'],ports:['portscan'],
-           bssid:['deauth'],client:['deauth'],count:['deauth'],ssid:['eviltwin']};
-  for(const base in F){
-    const show=F[base].includes(m);
-    const lbl=document.getElementById(base+'lbl'),inp=document.getElementById(base);
-    if(lbl)lbl.style.display=show?'':'none';
-    if(inp)inp.style.display=show?'':'none';
-  }
+// Separador de flujo: NO borra la consola, marca el inicio de una operacion nueva.
+function sep(t){
+  const hora=new Date().toLocaleTimeString('es-AR',{hour12:false});
+  const d=document.createElement('div');d.className='ln sys';
+  d.style.cssText='border-top:1px solid #262626;margin:12px 0 6px;padding-top:8px;color:var(--cyan)';
+  d.textContent='──────── '+t+'  ·  '+hora+' ────────';
+  out.appendChild(d);out.scrollTop=out.scrollHeight;
 }
+
+/* ============ DRAWER: abrir / cerrar ============ */
+function openConsole(){drawer.classList.add('open');backdrop.classList.add('open');consoleTab.classList.add('active');}
+function closeConsole(){drawer.classList.remove('open');backdrop.classList.remove('open');consoleTab.classList.remove('active');}
+function toggleConsole(){drawer.classList.contains('open')?closeConsole():openConsole();}
+backdrop.addEventListener('click',closeConsole);
+document.getElementById('closecon').addEventListener('click',closeConsole);
+document.getElementById('clearbtn').addEventListener('click',clearOut);
+stopBtn.addEventListener('click',abortScan);
+
+/* ============ NAVEGACIÓN: tabs + carrusel ============ */
+const CAT_LABEL={recon:'// RECONOCIMIENTO',off:'// OPERACIONES OFENSIVAS',sys:'// SISTEMA'};
+function activeTrack(){return document.querySelector('.track:not([hidden])');}
+function buildDots(){
+  const cards=activeTrack().querySelectorAll('.card');
+  dots.innerHTML='';
+  cards.forEach((_,i)=>{const d=document.createElement('span');d.className='dot2'+(i===0?' on':'');dots.appendChild(d);});
+}
+function switchCat(cat){
+  document.querySelectorAll('.track').forEach(t=>t.hidden=(t.dataset.cat!==cat));
+  document.querySelectorAll('.tab[data-cat]').forEach(t=>t.classList.toggle('active',t.dataset.cat===cat));
+  cateyebrow.textContent=CAT_LABEL[cat]||'';
+  cateyebrow.classList.toggle('off',cat==='off');
+  activeTrack().scrollLeft=0;
+  buildDots();
+  if(cat==='off')renderTargets();
+}
+document.querySelectorAll('.track').forEach(tr=>{
+  tr.addEventListener('scroll',()=>{
+    const i=Math.round(tr.scrollLeft/tr.clientWidth);
+    dots.querySelectorAll('.dot2').forEach((d,k)=>d.classList.toggle('on',k===i));
+  },{passive:true});
+});
+document.querySelectorAll('.tab[data-cat]').forEach(t=>{
+  t.addEventListener('click',()=>switchCat(t.dataset.cat));
+});
+
+/* --- Bandeja de consola: arrastrar hacia arriba/abajo (o tocar el handle) --- */
+let dragStartY=null,lastDelta=0,dragMoved=false,drawerH=0;
+function dStart(y){dragStartY=y;lastDelta=0;dragMoved=false;
+  drawerH=drawer.offsetHeight||innerHeight*0.8;drawer.style.transition='none';}
+function dMove(y){
+  if(dragStartY===null)return;
+  lastDelta=y-dragStartY;
+  if(Math.abs(lastDelta)>6)dragMoved=true;
+  const openNow=drawer.classList.contains('open');
+  let ty=(openNow?0:drawerH)+lastDelta;
+  ty=Math.max(0,Math.min(drawerH,ty));
+  drawer.style.transform='translateX(-50%) translateY('+ty+'px)';
+  if(!openNow){backdrop.classList.add('open');backdrop.style.opacity=String(1-ty/drawerH);}
+}
+function dEnd(){
+  if(dragStartY===null)return;
+  drawer.style.transition='';drawer.style.transform='';backdrop.style.opacity='';
+  const openNow=drawer.classList.contains('open');
+  if(!dragMoved){toggleConsole();}
+  else if(openNow){ lastDelta>drawerH*0.25 ? closeConsole() : openConsole(); }
+  else { lastDelta<-drawerH*0.15 ? openConsole() : closeConsole(); }
+  dragStartY=null;
+}
+function bindDrag(el){
+  el.addEventListener('touchstart',e=>dStart(e.touches[0].clientY),{passive:true});
+  el.addEventListener('touchmove',e=>{dMove(e.touches[0].clientY);e.preventDefault();},{passive:false});
+  el.addEventListener('touchend',dEnd);
+  el.addEventListener('touchcancel',dEnd);
+  el.addEventListener('mousedown',e=>{e.preventDefault();dStart(e.clientY);
+    const mm=ev=>dMove(ev.clientY);
+    const mu=()=>{dEnd();removeEventListener('mousemove',mm);removeEventListener('mouseup',mu);};
+    addEventListener('mousemove',mm);addEventListener('mouseup',mu);});
+}
+bindDrag(consoleTab);
+bindDrag(document.querySelector('.drawer .grip'));
+
+/* ============ BOTONES DE TARJETA ============ */
 const OPNAME={netscan:'ESCANEO DE RED',portscan:'ESCANEO DE PUERTOS',
   deauth:'DEAUTH WIFI',eviltwin:'EVIL TWIN',wifite:'WIFITE AUTO'};
 
-document.querySelectorAll('.item').forEach(el=>{
-  el.addEventListener('click',()=>{
-    const op=el.dataset.op;
-    // Acciones inmediatas (no usan EJECUTAR):
-    if(op==='clear'){clearOut();return;}
-    if(op==='status'){doStatus();return;}
-    if(op==='wifiscan'){startWifiScan();return;}
-    // Modos que se arman y esperan EJECUTAR: netscan/portscan/deauth/eviltwin/wifite
-    document.querySelectorAll('.item').forEach(i=>i.classList.remove('active'));
-    el.classList.add('active');mode=op;
-    showFields(op);
-    const off=el.classList.contains('off');
-    push('[*] Operación seleccionada: '+OPNAME[op]+(off?'  [OFENSIVA — solo redes autorizadas]':''),off?'warn':'sys');
-    // deauth / evil twin: ofrecer los objetivos ya descubiertos para elegir
-    if(op==='deauth'||op==='eviltwin')loadTargets(op);
+document.querySelectorAll('.exec').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const act=b.dataset.act;
+    if(act==='clear'){clearOut();openConsole();return;}
+    if(act==='status'){doStatus();openConsole();return;}
+    if(act==='wifiscan'){startWifiScan();return;}
+    const op=b.dataset.op; mode=op;
+    if(op==='netscan'||op==='portscan')return runScan(op);
+    if(op==='deauth')return startDeauth();
+    if(op==='eviltwin')return startEvilTwin();
+    if(op==='wifite')return startWifite();
   });
 });
-
-// EJECUTAR despacha segun el modo activo.
-runBtn.addEventListener('click',()=>{
-  if(mode==='netscan'||mode==='portscan')return runScan();
-  if(mode==='deauth')return startDeauth();
-  if(mode==='eviltwin')return startEvilTwin();
-  if(mode==='wifite')return startWifite();
+document.querySelectorAll('.rf').forEach(b=>{
+  b.addEventListener('click',()=>renderTargets(b.dataset.rf));
 });
-document.getElementById('stopbtn').addEventListener('click',abortScan);
-function setRunning(on){running=on;runBtn.style.display=on?'none':'';
-  document.getElementById('stopbtn').style.display=on?'':'none';}
+
+function setRunning(on){
+  running=on;
+  document.querySelectorAll('.exec,.pick').forEach(x=>x.disabled=on);
+  stopBtn.style.display=on?'':'none';
+  constat.textContent=on?'● corriendo':'idle';
+  consoleTab.classList.toggle('busy',on);
+  if(on)openConsole();
+}
 
 function doStatus(){
+  sep('ESTADO DEL SISTEMA');
   push('[*] Estado del sistema','sys');
   push('    enlace .......... '+(DEMO?'MODO DEMO (sin backend)':'servidor Flask'),'');
   push('    nmap ............ listo','ok');
-  push('    modulo wifi ..... OFFLINE (esperando adaptador)','down');
+  push('    modulo wifi ..... '+(DEMO?'OFFLINE (demo)':'wlan2 (adaptador externo)'),DEMO?'down':'ok');
   push('    scope ........... solo redes autorizadas','');
 }
 
 async function startWifiScan(){
-  clearOut();setRunning(true);
+  lastWasScan=true;
+  sep('RECONOCIMIENTO WIFI');setRunning(true);
   push('[*] Reconocimiento WiFi pasivo — escuchando el aire (30s)...','sys');
   if(DEMO){simulateWifi();return;}
   try{
@@ -425,7 +633,7 @@ async function startWifiScan(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateWifi();}
+  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateWifi();}
 }
 
 function simulateWifi(){
@@ -442,14 +650,12 @@ function simulateWifi(){
     ['',''],
     ["[*] Resumen: {'OK': 3, 'DEBIL': 2, 'CRITICO': 2, 'OPTIMO': 1}",'sys'],
     ['[*] Clientes detectados: 3','sys'],['── PROCESO FINALIZADO ──','sys']];
-  let i=0;const t=setInterval(()=>{if(i>=lines.length){clearInterval(t);setRunning(false);return;}
+  let i=0;const t=setInterval(()=>{if(i>=lines.length){clearInterval(t);setRunning(false);
+      lastWasScan=false;demoScanned=true;renderTargets();return;}   // demo: ahora hay objetivos
     push(lines[i][0],lines[i][1]);i++;},300);
 }
 
 /* ============ SELECTOR DE OBJETIVOS ============ */
-/* Al elegir deauth/evil twin, trae los AP del ultimo reconocimiento WiFi
-   (/api/wifi/targets) y los muestra clickeables. Un click rellena BSSID/SSID
-   (y ofrece los clientes del AP para el deauth), asi el usuario no tipea MACs. */
 const DEMO_TARGETS={redes:[
   {power:-42,canal:'11',nivel:'OK',      essid:'MOVISTAR-WIFI6',    bssid:'AC:22:0B:AA:11:01'},
   {power:-58,canal:'1', nivel:'DEBIL',   essid:'Fibertel WiFi695',  bssid:'F8:8E:85:BB:22:02'},
@@ -460,69 +666,90 @@ const DEMO_TARGETS={redes:[
   {station:'DE:AD:BE:EF:00:22',packets:37, bssid:'AC:22:0B:AA:11:01'},
   {station:'A1:B2:C3:D4:E5:F6',packets:88, bssid:'F8:8E:85:BB:22:02'}]};
 
-async function loadTargets(kind){
-  clearOut();
-  push('[*] '+OPNAME[kind]+' — elegí un objetivo de la lista:','warn');
-  let data;
-  if(DEMO){data=DEMO_TARGETS;}
-  else{
-    try{const r=await fetch('/api/wifi/targets');data=await r.json();}
-    catch(e){push('[ERROR] No se pudieron obtener objetivos del servidor','err');return;}
-  }
+let _tcache=null;                       // ultimo dataset de objetivos (para no re-fetchear al vicio)
+async function fetchTargets(force){
+  if(simMode)return demoScanned?DEMO_TARGETS:{redes:[],clientes:[]};
+  if(_tcache&&!force)return _tcache;
+  try{const r=await fetch('/api/wifi/targets');_tcache=await r.json();return _tcache;}
+  catch(e){simMode=true;return demoScanned?DEMO_TARGETS:{redes:[],clientes:[]};} // backend caido → simulacion
+}
+// Rellena la lista embebida de una card ofensiva (o de ambas si no se pasa kind).
+async function renderTargets(kind){
+  const data=await fetchTargets(!!kind);   // refresh explicito si viene de ⟳
+  if(!kind){fillTsel('deauth',data);fillTsel('eviltwin',data);return;}
+  fillTsel(kind,data);
+}
+function fillTsel(kind,data){
+  const box=document.getElementById('tlist_'+kind);
+  if(!box)return;
+  box.innerHTML='';
   const redes=(data&&data.redes)||[];
   const clientes=(data&&data.clientes)||[];
   if(!redes.length){
-    push('[!] No hay redes en memoria. Corré primero RECONOCIMIENTO WIFI (04).','warn');
+    const p=document.createElement('div');p.className='tempty';
+    p.textContent='Sin redes en memoria. Corré primero el reconocimiento WiFi. ';
     const b=document.createElement('button');b.className='tgtbtn';
-    b.textContent='▸ EJECUTAR RECONOCIMIENTO WIFI AHORA';
-    b.onclick=()=>document.querySelector('.item[data-op="wifiscan"]').click();
-    out.appendChild(b);return;
+    b.textContent='▸ RECONOCIMIENTO WIFI';
+    b.onclick=()=>{switchCat('recon');activeTrack().scrollLeft=activeTrack().scrollWidth;startWifiScan();};
+    p.appendChild(b);box.appendChild(p);return;
   }
   redes.forEach(r=>{
-    const row=document.createElement('div');row.className='ln tgt';
-    row.textContent='  ▸ '+String(r.power).padStart(4)+'dBm  CH'+String(r.canal).padStart(2)
-      +'  '+String(r.nivel||'').padEnd(9)+' '+String(r.essid||'').slice(0,20).padEnd(20)+'  '+r.bssid;
-    row.onclick=()=>pickTarget(kind,r,clientes);
-    out.appendChild(row);
-  });
-  out.scrollTop=0;
-}
+    const net=document.createElement('div');net.className='net';
+    const row=document.createElement('div');row.className='net-row';
+    const essid=r.essid&&r.essid!=='<oculta>'?r.essid:'<oculta>';
+    row.innerHTML='<span class="chev">▸</span><span>'+esc(essid)
+      +'</span><span class="net-meta">'+r.power+'dBm · CH'+r.canal+' · '+esc(r.bssid)+'</span>';
+    net.appendChild(row);
 
-function pickTarget(kind,r,clientes){
-  if(kind==='eviltwin'){
-    document.getElementById('ssid').value=(r.essid==='<oculta>')?'':r.essid;
-    push('[OK] Objetivo → SSID "'+r.essid+'". Presioná EJECUTAR.','sys');
-    return;
-  }
-  // deauth: fija el AP y ofrece sus clientes (opcional)
-  document.getElementById('bssid').value=r.bssid;
-  push('[OK] Objetivo → AP '+(r.essid||'')+' ['+r.bssid+']','sys');
-  const cli=clientes.filter(c=>(c.bssid||'').toUpperCase()===r.bssid.toUpperCase());
-  if(cli.length){
-    push('    Clientes asociados (opcional — o dejá broadcast):','');
-    cli.forEach(c=>{
-      const row=document.createElement('div');row.className='ln tgt';
-      row.textContent='      • '+c.station+'   ('+c.packets+' pkts)';
-      row.onclick=()=>{document.getElementById('client').value=c.station;
-        push('[OK] Cliente → '+c.station,'sys');};
-      out.appendChild(row);
-    });
-  }else{
-    document.getElementById('client').value='FF:FF:FF:FF:FF:FF';
-    push('    (sin clientes detectados — se usará broadcast)','');
-  }
-  push('    Ajustá TRAMAS y presioná EJECUTAR.','');
+    if(kind==='deauth'){
+      const cliWrap=document.createElement('div');cliWrap.className='net-clients';
+      const cli=clientes.filter(c=>(c.bssid||'').toUpperCase()===String(r.bssid).toUpperCase());
+      cli.forEach(c=>{
+        const cr=document.createElement('div');cr.className='cli-row';
+        cr.textContent='• '+c.station+'  ('+c.packets+' pkts)';
+        cr.onclick=e=>{e.stopPropagation();selClient(kind,net,cr,c.station,r);};
+        cliWrap.appendChild(cr);
+      });
+      const bc=document.createElement('div');bc.className='cli-row bcast';
+      bc.textContent='• broadcast — todos los clientes (FF:FF:FF:FF:FF:FF)';
+      bc.onclick=e=>{e.stopPropagation();selClient(kind,net,bc,'FF:FF:FF:FF:FF:FF',r);};
+      cliWrap.appendChild(bc);
+      net.appendChild(cliWrap);
+    }
+
+    row.onclick=()=>{
+      box.querySelectorAll('.net').forEach(n=>{if(n!==net){n.classList.remove('sel','open');}});
+      net.classList.toggle('open');net.classList.add('sel');
+      if(kind==='deauth'){
+        document.getElementById('bssid').value=r.bssid;
+        document.getElementById('client').value='FF:FF:FF:FF:FF:FF';
+        setSel('deauth',esc(essid)+' ['+r.bssid+'] · broadcast');
+      }else{
+        document.getElementById('ssid').value=(essid==='<oculta>')?'':essid;
+        setSel('eviltwin',esc(essid));
+      }
+    };
+    box.appendChild(net);
+  });
 }
+function selClient(kind,net,row,mac,r){
+  net.querySelectorAll('.cli-row').forEach(x=>x.classList.remove('sel'));
+  row.classList.add('sel');net.classList.add('sel');
+  document.getElementById('bssid').value=r.bssid;
+  document.getElementById('client').value=mac;
+  const cliTxt=mac==='FF:FF:FF:FF:FF:FF'?'broadcast':mac;
+  setSel('deauth',esc(r.essid&&r.essid!=='<oculta>'?r.essid:'<oculta>')+' ['+r.bssid+'] · '+cliTxt);
+}
+function setSel(kind,txt){document.getElementById('sel_'+kind).innerHTML='objetivo: <b>'+txt+'</b>';}
+function esc(s){return String(s==null?'':s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
 
 /* ============ OPERACIONES OFENSIVAS (redes autorizadas) ============ */
-/* Cada una postea a su endpoint y engancha el mismo stream SSE. Evil twin
-   y wifite corren indefinido: se cortan con ABORTAR (→ /api/stop). */
 async function startDeauth(){
   const bssid=document.getElementById('bssid').value.trim();
-  if(!bssid){push('[ERROR] Se requiere el BSSID del AP objetivo','err');return;}
+  if(!bssid){push('[ERROR] Se requiere el BSSID del AP objetivo','err');openConsole();return;}
   const client=document.getElementById('client').value.trim()||'FF:FF:FF:FF:FF:FF';
   const count=document.getElementById('count').value.trim()||'20';
-  clearOut();setRunning(true);
+  lastWasScan=false;sep('DEAUTH WIFI');setRunning(true);
   push('[*] DEAUTH → AP '+bssid+' | cliente '+client+' | '+count+' tramas','warn');
   push('[!] Operación ofensiva — asegurate de tener autorización sobre esta red','warn');
   if(DEMO){simulateDeauth(bssid,client,count);return;}
@@ -532,13 +759,13 @@ async function startDeauth(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateDeauth(bssid,client,count);}
+  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateDeauth(bssid,client,count);}
 }
 
 async function startEvilTwin(){
   const ssid=document.getElementById('ssid').value.trim();
-  if(!ssid){push('[ERROR] Se requiere el SSID a clonar','err');return;}
-  clearOut();setRunning(true);
+  if(!ssid){push('[ERROR] Se requiere el SSID a clonar','err');openConsole();return;}
+  lastWasScan=false;sep('EVIL TWIN');setRunning(true);
   push('[*] EVIL TWIN → clonando "'+ssid+'" en canal 6','warn');
   push('[!] El AP falso corre hasta que presiones ABORTAR','warn');
   if(DEMO){simulateEvilTwin(ssid);return;}
@@ -548,11 +775,11 @@ async function startEvilTwin(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateEvilTwin(ssid);}
+  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateEvilTwin(ssid);}
 }
 
 async function startWifite(){
-  clearOut();setRunning(true);
+  lastWasScan=false;sep('WIFITE AUTO');setRunning(true);
   push('[*] WIFITE AUTO → auditoría automatizada en wlan2','warn');
   push('[!] Corre hasta terminar o hasta que presiones ABORTAR','warn');
   if(DEMO){simulateWifite();return;}
@@ -562,7 +789,7 @@ async function startWifite(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateWifite();}
+  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateWifite();}
 }
 
 function simulateDeauth(bssid,client,count){
@@ -584,7 +811,7 @@ function simulateEvilTwin(ssid){
     ['wlan2: interface state UNINITIALIZED->ENABLED','down'],
     ['wlan2: AP-ENABLED','up']];
   let i=0;const t=setInterval(()=>{if(i>=L.length){clearInterval(t);return;}
-    push(L[i][0],L[i][1]);i++;},350);   // queda "corriendo" hasta ABORTAR
+    push(L[i][0],L[i][1]);i++;},350);
 }
 function simulateWifite(){
   const L=[['[*] Iniciando auditoría automatizada en la interfaz wlan2...','sys'],
@@ -600,20 +827,20 @@ function simulateWifite(){
     push(L[i][0],L[i][1]);i++;},380);
 }
 
-async function runScan(){
-  const target=targetEl.value.trim();
-  if(!target){push('[ERROR] Se requiere un objetivo','err');return;}
-  clearOut();setRunning(true);
-  const endpoint=mode==='portscan'?'/api/scan/ports':'/api/scan/network';
-  const body=mode==='portscan'?{target,ports:portsEl.value.trim()}:{target};
-  push('[*] Iniciando '+(mode==='portscan'?'escaneo de puertos':'escaneo de red')+' → '+target,'sys');
+async function runScan(op){
+  const target=(op==='portscan'?document.getElementById('port_target'):document.getElementById('net_target')).value.trim();
+  if(!target){push('[ERROR] Se requiere un objetivo','err');openConsole();return;}
+  lastWasScan=false;sep(op==='portscan'?'ESCANEO DE PUERTOS':'ESCANEO DE RED');setRunning(true);
+  const endpoint=op==='portscan'?'/api/scan/ports':'/api/scan/network';
+  const body=op==='portscan'?{target,ports:document.getElementById('ports').value.trim()}:{target};
+  push('[*] Iniciando '+(op==='portscan'?'escaneo de puertos':'escaneo de red')+' → '+target,'sys');
   if(DEMO){simulate(target);return;}
   try{
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulate(target);}
+  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulate(target);}
 }
 function openStream(){
   currentSource=new EventSource('/stream');
@@ -622,11 +849,13 @@ function openStream(){
     push(ev.data);};
   currentSource.onerror=()=>{push('[!] Stream interrumpido','warn');closeStream();};
 }
-function closeStream(){if(currentSource){currentSource.close();currentSource=null;}setRunning(false);}
+function closeStream(){
+  if(currentSource){currentSource.close();currentSource=null;}
+  setRunning(false);
+  if(lastWasScan){lastWasScan=false;_tcache=null;renderTargets();}  // recon terminado → refrescar objetivos
+}
 function abortScan(){
   push('[!] Enviando señal de aborto...','warn');
-  // /api/stop mata el proceso ofensivo en el server (deauth/eviltwin/wifite).
-  // Para los escaneos nmap responde 'idle' y solo cerramos el stream local.
   if(!DEMO){fetch('/api/stop',{method:'POST'}).catch(()=>{});}
   closeStream();
 }
@@ -644,9 +873,10 @@ function simulate(target){
     push(lines[i][0],lines[i][1]);i++;},420);
 }
 
+/* ============ BOOT ============ */
 const bl=document.getElementById('bootlog');
 const bootSteps=['inicializando WATCHDOG //','montando interfaz de red ......... OK',
-  'verificando nmap ................. OK','modulo wifi ...................... EN ESPERA',
+  'verificando nmap ................. OK','modulo wifi ...................... wlan2',
   'canal SSE ........................ ABIERTO',
   DEMO?'enlace backend ................... MODO DEMO':'enlace backend ................... OK',
   'acceso concedido_'];
@@ -658,10 +888,11 @@ function boot(){
   }else{const b=document.getElementById('boot');b.style.transition='opacity .5s';b.style.opacity='0';
     setTimeout(()=>b.remove(),520);
     document.getElementById('connlbl').innerHTML='<span class="dot '+(DEMO?'':'on')+'"></span>'+(DEMO?'DEMO':'ENLAZADO');
-    document.querySelector('.item[data-op="netscan"]').classList.add('active');
-    push('[*] Terminal lista. Seleccioná una operación o presioná EJECUTAR.','sys');
+    switchCat('recon');
+    push('[*] Terminal lista. Elegí una operación en las tarjetas y tocá EJECUTAR.','sys');
     if(DEMO)push('[i] Modo demo: salida simulada. Servido por Flask usará datos reales.','warn');}
 }
+buildDots();
 window.addEventListener('load',()=>setTimeout(boot,300));
 </script>
 </body>
