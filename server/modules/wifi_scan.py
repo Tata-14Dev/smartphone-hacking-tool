@@ -147,9 +147,12 @@ class WifiScanner:
         return t
 
     def _scan(self, seconds: int, prefix: str) -> None:
-        # --write-interval 1 y timeout controlado; airodump corre hasta que lo matamos
+        # --write-interval 1 y timeout controlado; airodump corre hasta que lo matamos.
+        # --band abg: escanear 2.4 GHz (b/g) Y 5 GHz (a). Por defecto airodump SOLO
+        # hopea 2.4 GHz, con lo que las redes/clientes de 5 GHz (WiFi 6, iPhones,
+        # etc.) quedan invisibles. Requiere que la antena soporte 5 GHz (RTL8812AU si).
         cmd = ["airodump-ng", "-w", prefix, "--output-format", "csv",
-               "--write-interval", "1", self._iface]
+               "--write-interval", "1", "--band", "abg", self._iface]
         log.info("Escaneo pasivo %ds sobre %s", seconds, self._iface)
         self._on_line(f"[*] Escuchando el aire {seconds}s sobre {self._iface}...")
         try:
