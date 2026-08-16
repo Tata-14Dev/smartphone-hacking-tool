@@ -155,6 +155,15 @@ class WifiScanner:
                "--write-interval", "1", "--band", "abg", self._iface]
         log.info("Escaneo pasivo %ds sobre %s", seconds, self._iface)
         self._on_line(f"[*] Escuchando el aire {seconds}s sobre {self._iface}...")
+        # CRITICO: airodump NO sobreescribe; si -01.csv existe crea -02, -03...
+        # y aca siempre leemos -01.csv. Sin limpiar, cada scan devolveria el
+        # PRIMER escaneo (datos viejos de otra ubicacion). Hay que borrar antes.
+        import glob, os
+        for _old in glob.glob(f"{prefix}-*"):
+            try:
+                os.remove(_old)
+            except OSError:
+                pass
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             import time
