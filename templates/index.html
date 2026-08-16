@@ -369,6 +369,15 @@ let currentSource = null, running = false, mode = 'netscan';
 let lastWasScan = false;   // la ultima operacion fue un recon wifi? (para refrescar objetivos al terminar)
 let demoScanned = false;   // en modo demo: ya se corrio un recon? (asi la lista arranca vacia como en real)
 let simMode = DEMO;        // sin backend alcanzable → simulacion (se auto-activa si un fetch falla)
+// Refleja en el header si estamos con backend real o en simulacion (datos de ejemplo).
+function updateConn(){
+  const el=document.getElementById('connlbl'); if(!el)return;
+  el.innerHTML = simMode
+    ? '<span class="dot" style="background:var(--red);box-shadow:0 0 8px var(--red)"></span>SIMULACIÓN'
+    : '<span class="dot on"></span>ENLAZADO';
+}
+// Entrar a modo simulacion de forma VISIBLE (nunca mostrar data falsa como real).
+function markSim(){ simMode=true; updateConn(); }
 
 setInterval(()=>{const d=new Date();
   document.getElementById('clock').textContent=d.toLocaleTimeString('es-AR',{hour12:false});},1000);
@@ -633,7 +642,7 @@ async function startWifiScan(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateWifi();}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulateWifi();}
 }
 
 function simulateWifi(){
@@ -671,7 +680,7 @@ async function fetchTargets(force){
   if(simMode)return demoScanned?DEMO_TARGETS:{redes:[],clientes:[]};
   if(_tcache&&!force)return _tcache;
   try{const r=await fetch('/api/wifi/targets');_tcache=await r.json();return _tcache;}
-  catch(e){simMode=true;return demoScanned?DEMO_TARGETS:{redes:[],clientes:[]};} // backend caido → simulacion
+  catch(e){markSim();return demoScanned?DEMO_TARGETS:{redes:[],clientes:[]};} // backend caido → simulacion
 }
 // Rellena la lista embebida de una card ofensiva (o de ambas si no se pasa kind).
 async function renderTargets(kind){
@@ -683,6 +692,13 @@ function fillTsel(kind,data){
   const box=document.getElementById('tlist_'+kind);
   if(!box)return;
   box.innerHTML='';
+  if(simMode){
+    const w=document.createElement('div');
+    w.style.cssText='background:rgba(226,59,47,.14);color:#ff6a5f;border:1px solid #4a2320;'
+      +'padding:8px 10px;font-size:11px;letter-spacing:.4px;line-height:1.45';
+    w.textContent='⚠ SIMULACIÓN — sin backend real. Estas redes son de EJEMPLO, no del entorno.';
+    box.appendChild(w);
+  }
   const redes=(data&&data.redes)||[];
   const clientes=(data&&data.clientes)||[];
   if(!redes.length){
@@ -759,7 +775,7 @@ async function startDeauth(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateDeauth(bssid,client,count);}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulateDeauth(bssid,client,count);}
 }
 
 async function startEvilTwin(){
@@ -775,7 +791,7 @@ async function startEvilTwin(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateEvilTwin(ssid);}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulateEvilTwin(ssid);}
 }
 
 async function startWifite(){
@@ -789,7 +805,7 @@ async function startWifite(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulateWifite();}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulateWifite();}
 }
 
 function simulateDeauth(bssid,client,count){
@@ -840,7 +856,7 @@ async function runScan(op){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){simMode=true;push('[ERROR] No se pudo contactar el servidor — modo demo','err');simulate(target);}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulate(target);}
 }
 function openStream(){
   currentSource=new EventSource('/stream');
@@ -887,7 +903,7 @@ function boot(){
     setTimeout(boot,bi===bootSteps.length?600:260);
   }else{const b=document.getElementById('boot');b.style.transition='opacity .5s';b.style.opacity='0';
     setTimeout(()=>b.remove(),520);
-    document.getElementById('connlbl').innerHTML='<span class="dot '+(DEMO?'':'on')+'"></span>'+(DEMO?'DEMO':'ENLAZADO');
+    updateConn();
     switchCat('recon');
     push('[*] Terminal lista. Elegí una operación en las tarjetas y tocá EJECUTAR.','sys');
     if(DEMO)push('[i] Modo demo: salida simulada. Servido por Flask usará datos reales.','warn');}
