@@ -1,1 +1,13 @@
 * text=auto eol=lf
+
+# Binarios: NO normalizar line endings (si no, se corrompen).
+*.woff2 binary
+*.woff  binary
+*.ttf   binary
+*.otf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary

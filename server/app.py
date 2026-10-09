@@ -78,6 +78,20 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/sw.js")
+def service_worker():
+    """
+    Sirve el service worker desde la RAIZ (/sw.js) para que su scope sea '/'
+    (si se sirviera desde /static/ solo controlaria /static/). Es lo que permite
+    que la PWA abra offline (modo avion). Sin cache para poder actualizarlo.
+    """
+    resp = app.send_static_file("sw.js")
+    resp.headers["Content-Type"] = "application/javascript"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 @app.route("/stream")
 def stream():
     """El navegador se conecta aca para recibir el output en tiempo real."""
