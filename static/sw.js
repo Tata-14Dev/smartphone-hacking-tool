@@ -4,7 +4,7 @@
    - POST (scan/ataques) se ignoran por completo.
    - /api/ y /stream (SSE) van siempre a la red, jamas se cachean (datos frescos).
 */
-const CACHE = 'watchdog-v1';
+const CACHE = 'watchdog-v2';   // subir la version cuando cambian assets (iconos/fuentes) para invalidar cache
 const SHELL = [
   '/',
   '/static/manifest.json',
