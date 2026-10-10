@@ -1,38 +1,54 @@
-# Watch Dogs Phone — Documento de Requerimientos
+# Watch Dogs Phone — Documento de Requerimientos (SRS)
 
-**Versión:** 1.0  
-**Fecha:** Julio 2026  
-**Estado:** Borrador inicial
+**Versión:** 1.1
+**Fecha:** Octubre 2026
+**Estado:** En desarrollo activo (ver roadmap en §8)
+
+> Documento vivo. Se actualiza a medida que el proyecto evoluciona; cada cambio
+> se versiona en Git. El estado de cada requerimiento refleja lo realmente
+> implementado y validado en hardware.
 
 ---
 
 ## 1. Introducción
 
 ### 1.1 Propósito
-Este documento describe los requerimientos del sistema **Watch Dogs Phone**, un framework de auditoría y pentesting móvil inspirado en el teléfono del videojuego Watch Dogs. El sistema permite ejecutar herramientas de seguridad ofensiva y defensiva desde un Samsung Galaxy S10 con Kali NetHunter, a través de una interfaz unificada.
+Este documento describe los requerimientos del sistema **Watch Dogs Phone**
+(repo: *smartphone-hacking-tool*, alias **WATCHDOG**), un framework de auditoría
+y pentesting móvil inspirado en el teléfono de Watch Dogs. Permite ejecutar
+herramientas de seguridad ofensiva y defensiva desde un Samsung Galaxy S10 con
+Kali NetHunter, a través de una interfaz unificada.
 
 ### 1.2 Alcance
 El sistema comprende:
-- Un servidor backend (Flask/Python) que corre dentro del chroot de Kali NetHunter
-- Una interfaz de usuario (APK Android) que permite seleccionar y configurar ataques/auditorías
-- Módulos independientes para cada protocolo o vector de ataque
-- Un motor de decisión que sugiere el mejor camino de ataque según el contexto
+- Un **servidor backend (Flask/Python)** que corre dentro del chroot de Kali NetHunter.
+- Una **interfaz web (PWA)** servida por ese backend en `localhost:5001`, instalable
+  como app a pantalla completa y **operable sin conexión a internet** (modo avión).
+- **Módulos** por protocolo/vector (WiFi, Red, y a futuro Bluetooth/NFC/HID).
+- Scripts de Kali (escaneo, ataques, salud de antena) y un **motor de decisión**
+  (a futuro) que sugiere el mejor camino de ataque según el contexto.
+
+> Nota de arquitectura: la UI NO es una APK nativa. Es una PWA (web) servida en
+> localhost. En teléfonos de-Googled (sin Play Services) se "instala" a pantalla
+> completa con un contenedor WebView (ej. Native Alpha). Ver §2.1.
 
 ### 1.3 Definiciones y acrónimos
 | Término | Definición |
 |---|---|
 | NetHunter | Overlay de Kali Linux para Android |
 | Chroot | Entorno Linux aislado corriendo dentro de Android |
-| APK | Android Package — aplicación instalable en Android |
-| BSSID | Dirección MAC de un punto de acceso WiFi |
-| SSID | Nombre de una red WiFi |
+| PWA | Progressive Web App — web instalable, con service worker y modo offline |
+| SSE | Server-Sent Events — stream de salida en tiempo real del backend a la UI |
+| BSSID / SSID | MAC / nombre de un punto de acceso WiFi |
+| PMF / 802.11w | Protected Management Frames — protege contra deauth; si está "required", el deauth clásico no funciona |
+| DFS | Canales 5 GHz de radar (52–64, 100–144) donde el adaptador en monitor normalmente NO puede inyectar |
+| WIDS | Wireless Intrusion Detection System (lado defensivo) |
 | HID | Human Interface Device — emulación de teclado/mouse por USB |
-| SDR | Software Defined Radio — radio definida por software |
-| MITM | Man In The Middle — ataque de interceptación de tráfico |
+| SDR | Software Defined Radio |
 
 ### 1.4 Referencias
-- Kali NetHunter Documentation: https://www.kali.org/docs/nethunter/
-- Samsung Galaxy S10 NetHunter Kernel (v0lk3n): beyond1lte-los
+- Kali NetHunter Docs: https://www.kali.org/docs/nethunter/
+- Samsung Galaxy S10 NetHunter (beyond1lte, LineageOS 23.2 / Android 16)
 - OWASP Mobile Security Testing Guide
 
 ---
@@ -40,239 +56,231 @@ El sistema comprende:
 ## 2. Descripción general del sistema
 
 ### 2.1 Perspectiva del sistema
-El sistema actúa como una capa de abstracción sobre las herramientas de Kali Linux. En lugar de ejecutar comandos manualmente en una terminal, el usuario interactúa con una interfaz gráfica que construye y ejecuta esos comandos automáticamente.
+El sistema es una capa de abstracción sobre las herramientas de Kali. En vez de
+tipear comandos en una terminal, el usuario usa una interfaz que arma y ejecuta
+esos comandos. **El motor vive en Kali** (solo ahí hay root + acceso a la antena
+en modo monitor); la UI es siempre un "control remoto" local de ese backend.
 
 ```
-┌──────────────────────────────────────────────────┐
-│              SAMSUNG GALAXY S10                  │
-│                                                  │
-│  ┌─────────────────┐    ┌────────────────────┐  │
-│  │   APK Android   │◄──►│  Servidor Flask    │  │
-│  │   (Interfaz)    │    │  (localhost:5000)  │  │
-│  └─────────────────┘    └────────┬───────────┘  │
-│                                  │               │
-│                    ┌─────────────▼────────────┐  │
-│                    │   Kali NetHunter Chroot  │  │
-│                    │  nmap / aircrack / msf   │  │
-│                    │  hydra / sqlmap / etc.   │  │
-│                    └──────────────────────────┘  │
-└──────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                    SAMSUNG GALAXY S10                       │
+│                                                            │
+│  ┌──────────────────────┐      ┌────────────────────────┐  │
+│  │  PWA (web, WebView)  │◄────►│  Servidor Flask        │  │
+│  │  localhost:5001      │ HTTP │  (dentro del chroot)   │  │
+│  │  offline / instalable│ /SSE │  app.py + módulos      │  │
+│  └──────────────────────┘      └───────────┬────────────┘  │
+│                                            │               │
+│                           ┌────────────────▼────────────┐  │
+│                           │   Kali NetHunter Chroot     │  │
+│                           │  nmap / aircrack / hostapd  │  │
+│                           │  dnsmasq / wifite / iw      │  │
+│                           └───────────┬─────────────────┘  │
+│                                       │ USB-OTG            │
+│                           ┌───────────▼─────────────────┐  │
+│                           │ Antena externa RTL8812AU     │  │
+│                           │ (wlan2, monitor + inyección) │  │
+│                           └──────────────────────────────┘  │
+└────────────────────────────────────────────────────────────┘
 ```
+El WiFi interno (wlan0/wlan1, BCM) NO soporta monitor y NO se toca: la interna
+queda para la conexión del teléfono; toda auditoría WiFi va por la antena externa.
 
 ### 2.2 Funciones principales del sistema
-- Auditoría de redes WiFi (escaneo, captura de handshakes, ataques)
-- Auditoría de redes Bluetooth (escaneo, sniffing)
-- Lectura y escritura de tags NFC/RFID
-- Escaneo de red y análisis de vulnerabilidades
-- Explotación de servicios vulnerables (Metasploit)
-- Ataques HID (emulación de teclado USB)
-- Motor de decisión para sugerencia automática de vectores de ataque
+- Auditoría de redes WiFi (escaneo 2.4/5 GHz, deauth, evil twin, handshakes).
+- Escaneo de red y puertos/servicios (Nmap).
+- Salud y recuperación de la antena (preparar/reset sin reboot).
+- Chequeo de dependencias e instalador.
+- Operación 100% offline (sin internet).
+- (A futuro) Bluetooth, NFC/RFID, HID, motor de decisión, WIDS defensivo.
 
 ### 2.3 Características de los usuarios
-El sistema está dirigido a:
-- **Usuarios primarios:** Pentesters y auditores de seguridad con conocimiento técnico medio-avanzado
-- **Usuarios secundarios:** Estudiantes de ciberseguridad en entornos controlados de laboratorio
+- **Primarios:** pentesters/auditores con conocimiento técnico medio-avanzado.
+- **Secundarios:** estudiantes de ciberseguridad en labs controlados.
 
 ### 2.4 Restricciones generales
-- El sistema **solo debe usarse en redes y dispositivos propios o con autorización explícita por escrito** del propietario
-- El uso en redes o dispositivos ajenos sin autorización constituye un delito en la mayoría de jurisdicciones
-- El sistema no implementa ningún mecanismo de evasión de protecciones legales
+- Uso **solo en redes/dispositivos propios o con autorización explícita**.
+- El uso no autorizado es delito en la mayoría de jurisdicciones.
+- El sistema no implementa evasión de protecciones legales.
 
 ---
 
 ## 3. Requerimientos funcionales
 
-Los requerimientos se clasifican por módulo. Cada requerimiento tiene:
-- **ID único**
-- **Descripción**
-- **Prioridad:** Alta / Media / Baja
-- **Estado:** Pendiente / En desarrollo / Completado
-
----
+Prioridad: Alta / Media / Baja · Estado: Pendiente / En desarrollo / Completado.
 
 ### 3.1 Módulo de WiFi
-
 | ID | Descripción | Prioridad | Estado |
 |---|---|---|---|
-| RF-WIFI-01 | El sistema debe poder escanear redes WiFi cercanas y mostrar SSID, BSSID, canal, potencia de señal y tipo de encriptación | Alta | Pendiente |
-| RF-WIFI-02 | El sistema debe poder poner la interfaz WiFi en modo monitor | Alta | Pendiente |
-| RF-WIFI-03 | El sistema debe poder capturar handshakes WPA/WPA2 de redes objetivo | Alta | Pendiente |
-| RF-WIFI-04 | El sistema debe poder ejecutar ataques de desautenticación (deauth) contra clientes de una red | Alta | Pendiente |
-| RF-WIFI-05 | El sistema debe poder crear un Access Point falso (Evil Twin) con el SSID de una red objetivo | Media | Pendiente |
-| RF-WIFI-06 | El sistema debe poder realizar ataques MITM sobre clientes conectados al Evil Twin | Media | Pendiente |
-| RF-WIFI-07 | El sistema debe poder intentar crackear handshakes capturados usando diccionarios | Media | Pendiente |
-| RF-WIFI-08 | El sistema debe permitir al usuario seleccionar la interfaz WiFi a usar (interna o adaptador externo) | Alta | Pendiente |
-
----
+| RF-WIFI-01 | Escanear redes WiFi (SSID, BSSID, canal, señal, encriptación) en 2.4 y 5 GHz | Alta | **Completado** |
+| RF-WIFI-02 | Poner la antena externa en modo monitor (automático al operar) | Alta | **Completado** |
+| RF-WIFI-03 | Capturar handshakes WPA/WPA2 de redes objetivo | Alta | En desarrollo (wifite; sin validar en HW) |
+| RF-WIFI-04 | Ejecutar deauth contra clientes/AP (fijando el canal del objetivo) | Alta | En desarrollo (falta confirmar en HW) |
+| RF-WIFI-05 | Crear Evil Twin (hostapd) con el SSID de una red objetivo | Media | En desarrollo |
+| RF-WIFI-06 | MITM sobre clientes conectados al Evil Twin | Media | Pendiente |
+| RF-WIFI-07 | Crackear handshakes capturados con diccionarios | Media | En desarrollo (wifite) |
+| RF-WIFI-08 | Seleccionar la interfaz (autodetección de la antena externa; interna excluida) | Alta | **Completado** (autodetección) |
 
 ### 3.2 Módulo de Red
-
 | ID | Descripción | Prioridad | Estado |
 |---|---|---|---|
-| RF-NET-01 | El sistema debe poder escanear hosts activos en un rango de IPs dado | Alta | Pendiente |
-| RF-NET-02 | El sistema debe poder detectar puertos abiertos y servicios corriendo en un host objetivo | Alta | Pendiente |
-| RF-NET-03 | El sistema debe poder detectar la versión de los servicios detectados | Alta | Pendiente |
-| RF-NET-04 | El sistema debe poder capturar tráfico de red en una interfaz dada y guardarlo en formato .pcap | Media | Pendiente |
-| RF-NET-05 | El sistema debe poder realizar ARP spoofing para posicionarse como MITM en una red local | Media | Pendiente |
-| RF-NET-06 | El sistema debe poder realizar DNS spoofing para redirigir dominios a IPs controladas | Media | Pendiente |
-| RF-NET-07 | El sistema debe integrar Metasploit para explotación de vulnerabilidades detectadas | Alta | Pendiente |
-| RF-NET-08 | El sistema debe poder realizar ataques de fuerza bruta sobre servicios SSH, FTP, HTTP | Media | Pendiente |
-
----
+| RF-NET-01 | Escanear hosts activos en un rango de IPs | Alta | **Completado** |
+| RF-NET-02 | Detectar puertos abiertos y servicios en un host | Alta | **Completado** |
+| RF-NET-03 | Detectar versión de los servicios (-sV) | Alta | **Completado** |
+| RF-NET-04 | Capturar tráfico a .pcap | Media | Pendiente |
+| RF-NET-05 | ARP spoofing (MITM en LAN) | Media | Pendiente |
+| RF-NET-06 | DNS spoofing | Media | Pendiente |
+| RF-NET-07 | Integrar Metasploit para explotación | Alta | Pendiente |
+| RF-NET-08 | Fuerza bruta sobre SSH/FTP/HTTP | Media | Pendiente |
 
 ### 3.3 Módulo de Bluetooth
-
 | ID | Descripción | Prioridad | Estado |
 |---|---|---|---|
-| RF-BT-01 | El sistema debe poder escanear dispositivos Bluetooth y BLE cercanos | Alta | Pendiente |
-| RF-BT-02 | El sistema debe mostrar información de cada dispositivo encontrado (MAC, nombre, RSSI, servicios) | Alta | Pendiente |
-| RF-BT-03 | El sistema debe poder capturar paquetes BLE en el rango de alcance | Media | Pendiente |
-| RF-BT-04 | El sistema debe poder intentar emparejar con dispositivos que no requieren confirmación | Baja | Pendiente |
-
----
+| RF-BT-01 | Escanear dispositivos Bluetooth/BLE | Alta | Pendiente (M4) |
+| RF-BT-02 | Mostrar info por dispositivo (MAC, nombre, RSSI, servicios) | Alta | Pendiente (M4) |
+| RF-BT-03 | Capturar paquetes BLE | Media | Pendiente |
+| RF-BT-04 | Emparejar con dispositivos sin confirmación | Baja | Pendiente |
 
 ### 3.4 Módulo NFC/RFID
-
 | ID | Descripción | Prioridad | Estado |
 |---|---|---|---|
-| RF-NFC-01 | El sistema debe poder leer tags NFC de 13.56MHz usando el chip interno del teléfono | Alta | Pendiente |
-| RF-NFC-02 | El sistema debe poder escribir datos en tags NFC vírgenes | Media | Pendiente |
-| RF-NFC-03 | El sistema debe soportar lectura/escritura de tags RFID de 125kHz mediante adaptador externo (Proxmark3) | Media | Pendiente |
-| RF-NFC-04 | El sistema debe poder clonar tags NFC/RFID compatibles | Media | Pendiente |
-| RF-NFC-05 | El sistema debe mostrar el contenido decodificado del tag leído (UID, tipo, datos) | Alta | Pendiente |
-
----
+| RF-NFC-01 | Leer tags NFC 13.56 MHz (chip interno) | Alta | Pendiente (M4) |
+| RF-NFC-02 | Escribir tags NFC vírgenes | Media | Pendiente |
+| RF-NFC-03 | RFID 125 kHz vía Proxmark3 | Media | Pendiente |
+| RF-NFC-04 | Clonar tags compatibles | Media | Pendiente |
+| RF-NFC-05 | Mostrar contenido decodificado (UID, tipo, datos) | Alta | Pendiente |
 
 ### 3.5 Módulo HID
-
 | ID | Descripción | Prioridad | Estado |
 |---|---|---|---|
-| RF-HID-01 | El sistema debe poder emular un teclado USB cuando el teléfono se conecta a una PC por USB | Alta | Pendiente |
-| RF-HID-02 | El sistema debe permitir al usuario cargar o escribir scripts de teclas a inyectar (estilo Rubber Ducky) | Alta | Pendiente |
-| RF-HID-03 | El sistema debe incluir templates de payloads predefinidos (reverse shell, exfiltración, etc.) | Media | Pendiente |
-| RF-HID-04 | El sistema debe permitir configurar el delay entre keystrokes | Media | Pendiente |
+| RF-HID-01 | Emular teclado USB al conectar a una PC | Alta | Pendiente |
+| RF-HID-02 | Cargar/escribir scripts de teclas (estilo Rubber Ducky) | Alta | Pendiente |
+| RF-HID-03 | Templates de payloads predefinidos | Media | Pendiente |
+| RF-HID-04 | Configurar delay entre keystrokes | Media | Pendiente |
 
----
-
-### 3.6 Motor de decisión
-
+### 3.6 Motor de decisión (Fase/M4)
 | ID | Descripción | Prioridad | Estado |
 |---|---|---|---|
-| RF-DEC-01 | El sistema debe analizar los resultados de un escaneo y sugerir automáticamente el siguiente vector de ataque | Alta | Pendiente |
-| RF-DEC-02 | El sistema debe priorizar vectores según probabilidad de éxito (puertos abiertos, servicios vulnerables, etc.) | Media | Pendiente |
-| RF-DEC-03 | El sistema debe poder integrarse con una API de LLM (ej. Claude/OpenAI) para análisis contextual avanzado | Baja | Pendiente |
-| RF-DEC-04 | El sistema debe registrar un log de todas las acciones ejecutadas con timestamp | Alta | Pendiente |
+| RF-DEC-01 | Analizar resultados de un escaneo y sugerir el siguiente vector | Alta | Pendiente |
+| RF-DEC-02 | Priorizar vectores por probabilidad de éxito | Media | Pendiente |
+| RF-DEC-03 | Integrar un LLM para análisis contextual | Baja | Pendiente |
+| RF-DEC-04 | Log de todas las acciones con timestamp | Alta | En desarrollo (logger central existe) |
 
----
-
-### 3.7 Interfaz de usuario (APK)
-
+### 3.7 Interfaz de usuario (PWA)
 | ID | Descripción | Prioridad | Estado |
 |---|---|---|---|
-| RF-UI-01 | La APK debe presentar un menú principal con los módulos disponibles | Alta | Pendiente |
-| RF-UI-02 | Cada módulo debe tener una pantalla de configuración donde el usuario ingresa los parámetros necesarios | Alta | Pendiente |
-| RF-UI-03 | La APK debe mostrar el output de cada herramienta en tiempo real | Alta | Pendiente |
-| RF-UI-04 | La APK debe tener un diseño visual inspirado en el teléfono de Watch Dogs (tema oscuro, tipografía monoespaciada, colores neón) | Baja | Pendiente |
-| RF-UI-05 | La APK debe mostrar el estado del chroot de Kali (activo/inactivo) | Media | Pendiente |
-| RF-UI-06 | La APK debe permitir guardar y cargar configuraciones de ataques previos | Baja | Pendiente |
+| RF-UI-01 | Menú principal con los módulos (tabs RECON / OFENSIVAS / SISTEMA) | Alta | **Completado** |
+| RF-UI-02 | Pantalla de configuración por operación (tarjetas/carrusel) | Alta | **Completado** |
+| RF-UI-03 | Output de cada herramienta en tiempo real (SSE, consola tipo bandeja) | Alta | **Completado** |
+| RF-UI-04 | Diseño inspirado en Watch Dogs (tema oscuro, mono, acentos neón) | Baja | **Completado** |
+| RF-UI-05 | Mostrar estado del sistema/antena/dependencias | Media | **Completado** (parcial: SISTEMA) |
+| RF-UI-06 | Guardar/cargar configuraciones de ataques previos | Baja | Pendiente |
+
+### 3.8 Sistema, operación y fiabilidad (NUEVO)
+| ID | Descripción | Prioridad | Estado |
+|---|---|---|---|
+| RF-SYS-01 | Funcionar 100% offline (sin internet), servido en localhost; PWA instalable | Alta | **Completado** (M1) |
+| RF-SYS-02 | Preparar la antena (monitor) automáticamente al iniciar una operación (sin pasos manuales) | Alta | **Completado** (M2) |
+| RF-SYS-03 | Recuperar la antena (reset): matar procesos colgados y restaurar monitor SIN reiniciar el teléfono | Alta | **Completado** (M2) |
+| RF-SYS-04 | Verificar las dependencias al abrir y avisar qué falta | Alta | **Completado** (M2) |
+| RF-SYS-05 | Script de instalación/actualización de dependencias (setup.sh) | Alta | **Completado** (M2) |
+| RF-SYS-06 | No mostrar datos inventados: sin backend, estado honesto (cero redes de ejemplo) | Alta | **Completado** (M2) |
+| RF-SYS-07 | Indicar por objetivo si el ataque es viable (PMF/802.11w, canal DFS, test de inyección) | Alta | En desarrollo (M2) |
+| RF-SYS-08 | Foolproof: nunca operar sobre la interfaz interna ni cortar la conexión del operador sin intención | Alta | **Completado** (parcial; se refina) |
+| RF-SYS-09 | Portabilidad: config central (interfaz/rutas/puerto) para correr en varios devices NetHunter | Media | Pendiente (M5) |
 
 ---
 
 ## 4. Requerimientos no funcionales
-
-| ID | Categoría | Descripción | Prioridad |
-|---|---|---|---|
-| RNF-01 | Rendimiento | El servidor Flask debe responder a cada request en menos de 500ms (excluyendo el tiempo de ejecución de la herramienta) | Media |
-| RNF-02 | Seguridad | El servidor Flask solo debe aceptar conexiones desde localhost (127.0.0.1) | Alta |
-| RNF-03 | Usabilidad | El usuario debe poder configurar y lanzar un ataque básico en menos de 3 pasos desde la interfaz | Media |
-| RNF-04 | Portabilidad | El backend debe poder correr en cualquier dispositivo Android con Kali NetHunter instalado | Media |
-| RNF-05 | Mantenibilidad | Cada módulo de ataque debe estar en un archivo Python independiente para facilitar el mantenimiento | Alta |
-| RNF-06 | Legalidad | El sistema debe incluir advertencias explícitas sobre uso ético y legal en el primer arranque | Alta |
-| RNF-07 | Logging | Todas las acciones ejecutadas deben quedar registradas en un archivo de log con timestamp y parámetros usados | Alta |
+| ID | Categoría | Descripción | Prioridad | Estado |
+|---|---|---|---|---|
+| RNF-01 | Rendimiento | El backend responde a cada request en <500ms (sin contar la ejecución de la herramienta) | Media | Completado |
+| RNF-02 | Seguridad | El backend debería aceptar conexiones solo desde localhost (127.0.0.1) | Alta | **Pendiente** (hoy bindea 0.0.0.0:5001 — ver §7) |
+| RNF-03 | Usabilidad | Configurar y lanzar un ataque básico en ≤3 pasos | Media | Completado |
+| RNF-04 | Portabilidad | El backend corre en cualquier device Android con NetHunter | Media | En desarrollo (M5) |
+| RNF-05 | Mantenibilidad | Cada módulo de ataque en un archivo Python/script independiente | Alta | Completado |
+| RNF-06 | Legalidad | Advertencias de uso ético/legal visibles en la interfaz | Alta | Completado |
+| RNF-07 | Logging | Acciones registradas con timestamp y parámetros | Alta | En desarrollo (logger central) |
+| RNF-08 | Offline | Operar sin conexión a internet (modo avión); sin dependencias externas en runtime | Alta | **Completado** (M1) |
+| RNF-09 | Fiabilidad | Recuperarse de estados trabados de la antena sin reiniciar el teléfono | Alta | **Completado** (M2, reset) |
 
 ---
 
 ## 5. Casos de uso principales
 
-### CU-01: Auditoría de red WiFi
-**Actor:** Usuario  
-**Precondición:** Chroot de Kali activo, interfaz WiFi en modo monitor  
-**Flujo principal:**
-1. Usuario abre el módulo WiFi en la APK
-2. Selecciona "Escanear redes"
-3. El sistema muestra la lista de redes detectadas
-4. Usuario selecciona una red objetivo
-5. Selecciona "Capturar handshake"
-6. El sistema desautentica un cliente y captura el handshake
-7. El sistema guarda el archivo .cap
+### CU-01: Reconocimiento WiFi
+**Actor:** Usuario · **Precondición:** antena externa enchufada (el monitor se activa solo).
+1. Abre RECON → RECONOCIMIENTO WIFI y ejecuta.
+2. El sistema prepara la antena en monitor automáticamente y escucha el aire (2.4+5 GHz).
+3. Muestra las redes reales (señal, canal, seguridad) y clientes; alimenta el selector de objetivos ofensivos.
 
-**Flujo alternativo:** Si no hay clientes conectados, el sistema notifica al usuario y sugiere esperar.
+### CU-02: Deauth dirigido
+**Actor:** Usuario · **Precondición:** scan previo.
+1. En OFENSIVAS → DEAUTH elige un AP de la lista (y opcional un cliente).
+2. El sistema fija el canal del AP y lanza el deauth.
+3. (En desarrollo) Antes, el sistema indica si el objetivo es viable (PMF/DFS).
 
----
+### CU-03: Recuperar la antena
+**Actor:** Usuario · **Precondición:** algo quedó trabado (ej. evil twin dejó la antena en modo AP).
+1. SISTEMA → ANTENA → RESET.
+2. El sistema mata hostapd/airodump/aireplay/wifite y devuelve la antena a monitor, sin reiniciar.
 
-### CU-02: Escaneo y explotación de red
-**Actor:** Usuario  
-**Precondición:** Conectado a una red WiFi objetivo  
-**Flujo principal:**
-1. Usuario abre el módulo de Red
-2. Ingresa el rango de IPs a escanear
-3. El sistema ejecuta Nmap y muestra hosts activos
-4. Usuario selecciona un host
-5. El sistema escanea puertos y detecta servicios
-6. El motor de decisión sugiere el mejor exploit disponible
-7. Usuario confirma y el sistema lanza el exploit via Metasploit
-
----
-
-### CU-03: Ataque HID a PC
-**Actor:** Usuario  
-**Precondición:** Teléfono conectado a una PC por USB, modo HID habilitado  
-**Flujo principal:**
-1. Usuario abre el módulo HID
-2. Selecciona o escribe un payload
-3. Configura el delay entre teclas
-4. Ejecuta el payload
-5. El teléfono inyecta las teclas en la PC objetivo
+### CU-04: Escaneo y (futuro) explotación de red
+**Actor:** Usuario · **Precondición:** conectado a la red objetivo.
+1. RECON → ESCANEO DE RED / PUERTOS (Nmap).
+2. (Futuro) el motor de decisión sugiere el mejor exploit; el usuario confirma.
 
 ---
 
 ## 6. Requerimientos de hardware
-
 | Componente | Especificación | Obligatorio |
 |---|---|---|
 | Teléfono | Samsung Galaxy S10 (SM-G973F) con NetHunter | Sí |
-| OS del teléfono | LineageOS 23.2 + Magisk + Kali NetHunter | Sí |
-| Adaptador WiFi externo | Chipset RTL8812AU (para inyección avanzada) | No |
-| Adaptador NFC/RFID | Proxmark3 (para 125kHz) | No |
-| Dongle SDR | RTL-SDR RTL2832U (para análisis de radiofrecuencia) | No |
+| OS | LineageOS 23.2 (Android 16) + Magisk + Kali NetHunter | Sí |
+| Adaptador WiFi externo | RTL8812AU (monitor + inyección, 2.4/5 GHz) | Sí (para WiFi) |
+| Alimentación | Hub USB + powerbank (la inyección consume picos; evitar brownouts) | Recomendado |
+| Adaptador NFC/RFID | Proxmark3 (125 kHz) | No |
+| Dongle SDR | RTL-SDR RTL2832U | No |
 
 ---
 
 ## 7. Restricciones y suposiciones
 
 ### Restricciones
-- El sistema depende del kernel de NetHunter para funciones de bajo nivel (monitor mode, inyección WiFi, HID)
-- Las herramientas de Kali deben estar instaladas en el chroot antes de usar los módulos correspondientes
-- La APK requiere Android 12 o superior (LineageOS 23.2)
+- Depende del kernel de NetHunter para monitor mode, inyección y (futuro) HID.
+- Las herramientas de Kali deben estar instaladas en el chroot (ver `setup.sh`;
+  la app las chequea al abrir).
+- La antena externa es obligatoria para WiFi (el WiFi interno no hace monitor).
+- Canales **DFS** de 5 GHz (52–144): el RTL8812AU en monitor normalmente no inyecta.
+- **PMF/802.11w**: si el AP lo tiene "required" (WPA3/WiFi6), el deauth no funciona.
+
+### Deuda técnica / pendientes conocidos
+- **RNF-02:** el server hoy bindea `0.0.0.0:5001` (accesible por LAN). Para cumplir
+  "solo localhost" debería bindear `127.0.0.1`. Pendiente de decidir/implementar.
+- Interfaz hardcodeada a `wlan2` en varios lugares (pendiente config central, M5).
 
 ### Suposiciones
-- El usuario tiene conocimientos básicos de redes y seguridad informática
-- El usuario cuenta con autorización legal para auditar los sistemas objetivo
-- El teléfono tiene conexión a internet para descargar actualizaciones del chroot
+- El usuario tiene conocimientos básicos de redes/seguridad.
+- El usuario cuenta con autorización legal sobre los objetivos.
+- Se necesita internet SOLO para instalar/actualizar dependencias (`setup.sh`),
+  no para operar.
 
 ---
 
-## 8. Plan de desarrollo (MVP)
+## 8. Roadmap por milestones (reemplaza el plan de fases anterior)
 
-| Fase | Contenido | Estimación |
+| Milestone | Contenido | Estado |
 |---|---|---|
-| Fase 1 — Backend base | Servidor Flask + módulo de red (Nmap) + logging | 1 semana |
-| Fase 2 — WiFi | Módulo WiFi completo (escaneo, deauth, handshake) | 1 semana |
-| Fase 3 — APK básica | Interfaz Android con módulos de red y WiFi | 2 semanas |
-| Fase 4 — Módulos extra | BT, NFC, HID | 2 semanas |
-| Fase 5 — Motor de decisión | Lógica de sugerencia automática de ataques | 1 semana |
-| Fase 6 — UI final | Diseño Watch Dogs, pulido general | 1 semana |
+| **M1 — PWA + offline total** | Fuentes embebidas, manifest, service worker, ícono; abre sin internet; instalable | **Completado** |
+| **M2 — Core ofensivo confiable** | Antena (prepare/reset), auto-preparar, chequeo de deps + setup.sh, sin hardcode; (en curso) viabilidad PMF/DFS, scan de clientes bloqueado, confirmar deauth/evil twin/wifite en HW | En desarrollo |
+| **M3 — Core defensivo (WIDS)** | Detección de evil twins, deauth floods, rogue APs; sección DEFENSA | Pendiente |
+| **M4 — Módulos restantes** | bluetooth/nfc/hid/exploits + `decision.py` (motor de decisión) + tests/logging/scope | Pendiente |
+| **M5 — Portabilidad** | Config central (iface/rutas/puerto), autodetección, deploy documentado en varios devices NetHunter | Pendiente |
+
+### Flujo de trabajo (Git)
+experimental → `develop` (se prueba en el teléfono) → confirmado → `main` (repo
+principal, el que la gente clona).
 
 ---
 
-*Este documento debe actualizarse a medida que el proyecto evoluciona. Cada cambio debe versionarse en Git.*
+*Documento vivo — actualizar con cada cambio y versionar en Git.*

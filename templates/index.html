@@ -402,7 +402,6 @@ const cateyebrow = document.getElementById('cateyebrow');
 const consoleTab = document.querySelector('.consola-handle');
 let currentSource = null, running = false, mode = 'netscan';
 let lastWasScan = false;   // la ultima operacion fue un recon wifi? (para refrescar objetivos al terminar)
-let demoScanned = false;   // en modo demo: ya se corrio un recon? (asi la lista arranca vacia como en real)
 let simMode = DEMO;        // sin backend alcanzable → simulacion (se auto-activa si un fetch falla)
 // Refleja en el header si estamos con backend real o en simulacion (datos de ejemplo).
 function updateConn(){
@@ -718,45 +717,25 @@ async function startWifiScan(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulateWifi();}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (sin datos reales)','err');simulateWifi();}
 }
 
-function simulateWifi(){
-  const lines=[
-    ['[*] Escuchando el aire 30s sobre wlan2...','sys'],
-    ['[OK] 7 redes detectadas:','sys'],['',''],
-    ['   -21dBm  CH 11  OK         MOVISTAR-WIFI6          WPA2-CCMP','up'],
-    ['   -58dBm  CH  1  DEBIL      WLED-AP                 Usa TKIP, obsoleto','warn'],
-    ['   -64dBm  CH  5  OK         Telecentro-6456         WPA2-CCMP','up'],
-    ['   -80dBm  CH  6  CRITICO    Personal Wifi Zone      Red abierta','err'],
-    ['   -82dBm  CH  1  OPTIMO     <oculta>                WPA3 (SAE)','up'],
-    ['   -82dBm  CH  1  DEBIL      Fibertel WiFi695        Modo mixto WPA/WPA2','warn'],
-    ['   -88dBm  CH  1  CRITICO    Personal Wifi Zone      Red abierta','err'],
-    ['',''],
-    ["[*] Resumen: {'OK': 3, 'DEBIL': 2, 'CRITICO': 2, 'OPTIMO': 1}",'sys'],
-    ['[*] Clientes detectados: 3','sys'],['── PROCESO FINALIZADO ──','sys']];
-  let i=0;const t=setInterval(()=>{if(i>=lines.length){clearInterval(t);setRunning(false);
-      lastWasScan=false;demoScanned=true;renderTargets();return;}   // demo: ahora hay objetivos
-    push(lines[i][0],lines[i][1]);i++;},300);
+// Sin backend NO inventamos datos (nada hardcodeado): avisamos y listo.
+function simNotice(){
+  push('[SIMULACIÓN] Sin backend real — no hay datos.','warn');
+  push('    Conectá el server (WD-START) para escanear/operar con datos reales.','');
+  push('── FIN ──','sys');
+  setRunning(false);
 }
+function simulateWifi(){ simNotice(); }
 
 /* ============ SELECTOR DE OBJETIVOS ============ */
-const DEMO_TARGETS={redes:[
-  {power:-42,canal:'11',nivel:'OK',      essid:'MOVISTAR-WIFI6',    bssid:'AC:22:0B:AA:11:01'},
-  {power:-58,canal:'1', nivel:'DEBIL',   essid:'Fibertel WiFi695',  bssid:'F8:8E:85:BB:22:02'},
-  {power:-64,canal:'5', nivel:'OK',      essid:'Telecentro-6456',   bssid:'C0:FF:EE:CC:33:03'},
-  {power:-80,canal:'6', nivel:'CRITICO', essid:'Personal Wifi Zone',bssid:'00:1A:2B:DD:44:04'}],
-  clientes:[
-  {station:'DE:AD:BE:EF:00:11',packets:142,bssid:'AC:22:0B:AA:11:01'},
-  {station:'DE:AD:BE:EF:00:22',packets:37, bssid:'AC:22:0B:AA:11:01'},
-  {station:'A1:B2:C3:D4:E5:F6',packets:88, bssid:'F8:8E:85:BB:22:02'}]};
-
 let _tcache=null;                       // ultimo dataset de objetivos (para no re-fetchear al vicio)
 async function fetchTargets(force){
-  if(simMode)return demoScanned?DEMO_TARGETS:{redes:[],clientes:[]};
+  if(simMode)return {redes:[],clientes:[]};      // sin backend: sin objetivos (nunca inventamos)
   if(_tcache&&!force)return _tcache;
   try{const r=await fetch('/api/wifi/targets');_tcache=await r.json();return _tcache;}
-  catch(e){markSim();return demoScanned?DEMO_TARGETS:{redes:[],clientes:[]};} // backend caido → simulacion
+  catch(e){markSim();return {redes:[],clientes:[]};}
 }
 // Rellena la lista embebida de una card ofensiva (o de ambas si no se pasa kind).
 async function renderTargets(kind){
@@ -772,7 +751,7 @@ function fillTsel(kind,data){
     const w=document.createElement('div');
     w.style.cssText='background:rgba(226,59,47,.14);color:#ff6a5f;border:1px solid #4a2320;'
       +'padding:8px 10px;font-size:11px;letter-spacing:.4px;line-height:1.45';
-    w.textContent='⚠ SIMULACIÓN — sin backend real. Estas redes son de EJEMPLO, no del entorno.';
+    w.textContent='⚠ SIMULACIÓN — sin backend real. No hay datos (conectá el server).';
     box.appendChild(w);
   }
   const redes=(data&&data.redes)||[];
@@ -851,7 +830,7 @@ async function startDeauth(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulateDeauth(bssid,client,count);}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (sin datos reales)','err');simulateDeauth(bssid,client,count);}
 }
 
 async function startEvilTwin(){
@@ -867,7 +846,7 @@ async function startEvilTwin(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulateEvilTwin(ssid);}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (sin datos reales)','err');simulateEvilTwin(ssid);}
 }
 
 async function startWifite(){
@@ -881,43 +860,12 @@ async function startWifite(){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulateWifite();}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (sin datos reales)','err');simulateWifite();}
 }
 
-function simulateDeauth(bssid,client,count){
-  const L=[['[*] Iniciando inyección de paquetes deauth en wlan2...','sys'],
-    ['[OK] Inyectando '+count+' tramas de desautenticación...','ok'],
-    ['    Objetivo AP: '+bssid+' | Cliente: '+client,''],['',''],
-    ['12:00:01  Sending 64 directed DeAuth (code 7). STMAC: ['+client+']','down'],
-    ['12:00:02  Sending 64 directed DeAuth (code 7). STMAC: ['+client+']','down'],
-    ['[OK] Ataque de desautenticación finalizado.','ok'],['── PROCESO FINALIZADO ──','sys']];
-  let i=0;const t=setInterval(()=>{if(i>=L.length){clearInterval(t);setRunning(false);return;}
-    push(L[i][0],L[i][1]);i++;},350);
-}
-function simulateEvilTwin(ssid){
-  const L=[['[*] Configurando entorno para Punto de Acceso Falso...','sys'],
-    ['[OK] Archivo de configuración temporal montado en /tmp/hostapd.conf','ok'],
-    ['[OK] Desplegando red gemela: [ '+ssid+' ] en canal 6...','ok'],
-    ['[*] Presioná ABORTAR para apagar el punto de acceso.','sys'],['',''],
-    ['Configuration file: /tmp/hostapd.conf','down'],
-    ['wlan2: interface state UNINITIALIZED->ENABLED','down'],
-    ['wlan2: AP-ENABLED','up']];
-  let i=0;const t=setInterval(()=>{if(i>=L.length){clearInterval(t);return;}
-    push(L[i][0],L[i][1]);i++;},350);
-}
-function simulateWifite(){
-  const L=[['[*] Iniciando auditoría automatizada en la interfaz wlan2...','sys'],
-    ['[OK] Interfaz wlan2 establecida en modo monitor.','ok'],
-    ['[*] Lanzando Wifite en segundo plano...','sys'],['',''],
-    ['   NUM  ESSID              CH  ENCR  POWER  WPS  CLIENT','down'],
-    ['   1    MOVISTAR-WIFI6     11  WPA2  -42db  no   1','down'],
-    ['   2    Fibertel WiFi695    1  WPA2  -68db  yes  0','down'],
-    ['[+] Capturando handshake de MOVISTAR-WIFI6...','sys'],
-    ['[!] La sesión finalizó sin claves descifradas (Handshakes almacenados).','warn'],
-    ['[OK] Proceso finalizado. Hardware restaurado.','ok'],['── PROCESO FINALIZADO ──','sys']];
-  let i=0;const t=setInterval(()=>{if(i>=L.length){clearInterval(t);setRunning(false);return;}
-    push(L[i][0],L[i][1]);i++;},380);
-}
+function simulateDeauth(){ simNotice(); }
+function simulateEvilTwin(){ simNotice(); }
+function simulateWifite(){ simNotice(); }
 
 async function runScan(op){
   const target=(op==='portscan'?document.getElementById('port_target'):document.getElementById('net_target')).value.trim();
@@ -932,7 +880,7 @@ async function runScan(op){
     const j=await r.json();
     if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
     openStream();
-  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (datos de ejemplo)','err');simulate(target);}
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (sin datos reales)','err');simulate(target);}
 }
 function openStream(){
   currentSource=new EventSource('/stream');
@@ -952,18 +900,7 @@ function abortScan(){
   closeStream();
 }
 
-function simulate(target){
-  const lines=[
-    ['Starting Nmap 7.99 ( https://nmap.org )','sys'],['Initiating ARP Ping Scan','sys'],
-    ['Scanning 255 hosts [1 port/host]',''],['Nmap scan report for 192.168.1.1',''],
-    ['Host is up (0.0092s latency).','up'],['MAC Address: 2C:96:82:AF:3C:90 (MitraStar Technology)',''],
-    ['Nmap scan report for 192.168.1.81',''],['Host is up (0.18s latency).','up'],
-    ['MAC Address: 42:02:0B:72:FD:E0 (Unknown / MAC privada)',''],
-    ['Nmap scan report for 192.168.1.90',''],['Host is up.','up'],
-    ['Nmap done: 256 IP addresses (3 hosts up) scanned in 51.65s','sys'],['── PROCESO FINALIZADO ──','sys']];
-  let i=0;const t=setInterval(()=>{if(i>=lines.length){clearInterval(t);setRunning(false);return;}
-    push(lines[i][0],lines[i][1]);i++;},420);
-}
+function simulate(){ simNotice(); }
 
 /* ============ BOOT ============ */
 const bl=document.getElementById('bootlog');
