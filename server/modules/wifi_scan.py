@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import csv
 import io
+import os
+import re
 import subprocess
 import threading
 from typing import Callable, Dict, List
@@ -22,6 +24,13 @@ from typing import Callable, Dict, List
 from logger import get_logger
 
 log = get_logger(__name__)
+
+# Quita secuencias de color ANSI (la salida de antenna.sh las trae).
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+# Ruta a los scripts de Kali, relativa a este modulo (server/modules/ -> ../../scripts/..).
+_ANTENNA_SH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "kali-scripts", "antenna.sh")
+)
 
 LineCallback = Callable[[str], None]
 
@@ -146,7 +155,27 @@ class WifiScanner:
         t.start()
         return t
 
+    def _ensure_monitor(self) -> None:
+        """
+        Deja la antena en monitor AUTOMATICAMENTE antes de escanear (llama a
+        antenna.sh prepare). Asi el usuario no tiene que correr WD-MONITOR a mano.
+        La salida (sin ANSI) va a la consola.
+        """
+        try:
+            r = subprocess.run(
+                ["bash", _ANTENNA_SH, "prepare"],
+                capture_output=True, text=True, timeout=30,
+            )
+            for ln in (r.stdout or "").splitlines():
+                ln = _ANSI.sub("", ln).rstrip()
+                if ln:
+                    self._on_line(ln)
+        except Exception as exc:  # noqa: BLE001
+            self._on_line(f"[!] No se pudo preparar la antena automaticamente: {exc}")
+
     def _scan(self, seconds: int, prefix: str) -> None:
+        # Auto-preparar la antena (monitor) antes de nada: cero pasos manuales.
+        self._ensure_monitor()
         # --write-interval 1 y timeout controlado; airodump corre hasta que lo matamos.
         # --band abg: escanear 2.4 GHz (b/g) Y 5 GHz (a). Por defecto airodump SOLO
         # hopea 2.4 GHz, con lo que las redes/clientes de 5 GHz (WiFi 6, iPhones,

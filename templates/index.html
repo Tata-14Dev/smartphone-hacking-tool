@@ -311,12 +311,30 @@
 
       <!-- ===== SISTEMA ===== -->
       <div class="track" data-cat="sys" hidden>
+        <article class="card" data-op="antenna">
+          <div class="ctop"><span class="cidx">A</span><span class="cstat">SISTEMA</span></div>
+          <h2>ANTENA</h2>
+          <p class="cdesc">Salud de la antena externa (wlan2). Si algo quedó trabado ("resource busy", o en modo AP tras un evil twin), <b>RESET</b> la recupera sin reiniciar el teléfono. Funciona aunque haya un ataque colgado.</p>
+          <div class="spacer"></div>
+          <button class="btn exec always" data-act="antenna-status">▸ ESTADO</button>
+          <button class="btn exec always" data-act="antenna-prepare">▸ PREPARAR (monitor)</button>
+          <button class="btn exec always" data-act="antenna-reset" style="border-color:var(--red);color:var(--red-lit)">▸ RESET (recuperar)</button>
+        </article>
+
         <article class="card" data-op="status">
           <div class="ctop"><span class="cidx">03</span><span class="cstat">SISTEMA</span></div>
           <h2>ESTADO DEL SISTEMA</h2>
           <p class="cdesc">Chequeo rápido: enlace, nmap, módulo WiFi y scope autorizado.</p>
           <div class="spacer"></div>
           <button class="btn exec" data-act="status">▸ CONSULTAR</button>
+        </article>
+
+        <article class="card" data-op="deps">
+          <div class="ctop"><span class="cidx">D</span><span class="cstat">SISTEMA</span></div>
+          <h2>DEPENDENCIAS</h2>
+          <p class="cdesc">Chequea que estén las herramientas (aircrack, hostapd, dnsmasq, nmap, wifite, flask…). Si falta algo, corré <b>scripts/setup.sh</b> dentro de Kali.</p>
+          <div class="spacer"></div>
+          <button class="btn exec always" data-act="deps">▸ CHEQUEAR</button>
         </article>
 
         <article class="card" data-op="clear">
@@ -619,6 +637,10 @@ document.querySelectorAll('.exec').forEach(b=>{
     if(act==='clear'){clearOut();openConsole();return;}
     if(act==='status'){doStatus();openConsole();return;}
     if(act==='wifiscan'){startWifiScan();return;}
+    if(act==='antenna-status')return antennaOp('status');
+    if(act==='antenna-prepare')return antennaOp('prepare');
+    if(act==='antenna-reset')return antennaOp('reset');
+    if(act==='deps')return checkHealth(true);
     const op=b.dataset.op; mode=op;
     if(op==='netscan'||op==='portscan')return runScan(op);
     if(op==='deauth')return startDeauth();
@@ -632,7 +654,7 @@ document.querySelectorAll('.rf').forEach(b=>{
 
 function setRunning(on){
   running=on;
-  document.querySelectorAll('.exec,.pick').forEach(x=>x.disabled=on);
+  document.querySelectorAll('.exec:not(.always),.pick').forEach(x=>x.disabled=on);
   stopBtn.style.display=on?'':'none';
   constat.textContent=on?'● corriendo':'idle';
   consoleTab.classList.toggle('busy',on);
@@ -646,6 +668,43 @@ function doStatus(){
   push('    nmap ............ listo','ok');
   push('    modulo wifi ..... '+(DEMO?'OFFLINE (demo)':'wlan2 (adaptador externo)'),DEMO?'down':'ok');
   push('    scope ........... solo redes autorizadas','');
+}
+
+// Control de antena (status/prepare/reset). RESET funciona aunque haya un ataque
+// colgado: primero corta el proceso en curso, despues recupera la antena.
+async function antennaOp(kind){
+  if(currentSource)closeStream();
+  const LBL={status:'ANTENA · ESTADO',prepare:'ANTENA · PREPARAR',reset:'ANTENA · RESET'};
+  sep(LBL[kind]||'ANTENA');
+  if(simMode){openConsole();push('[SIMULACIÓN] sin antena real (backend offline)','warn');return;}
+  try{
+    if(kind==='reset'){await fetch('/api/stop',{method:'POST'}).catch(()=>{});}
+    setRunning(true);
+    const r=await fetch('/api/antenna/'+kind,{method:'POST'});
+    const j=await r.json();
+    if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
+    openStream();
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN','err');setRunning(false);}
+}
+
+// Chequeo de dependencias (al abrir y manual desde SISTEMA).
+// verbose=false (al abrir): silencioso si está todo OK, avisa fuerte si falta algo.
+// verbose=true (botón): muestra siempre el reporte completo.
+async function checkHealth(verbose){
+  if(simMode){ if(verbose){sep('DEPENDENCIAS');push('[SIMULACIÓN] sin backend real','warn');openConsole();} return; }
+  try{
+    const r=await fetch('/api/health'); const j=await r.json();
+    const lines=(j.report||'').split('\n');
+    if(j.ok){
+      if(verbose){ sep('DEPENDENCIAS'); lines.forEach(l=>l.trim()&&push(l)); openConsole(); }
+      else push('[OK] Dependencias completas.','ok');
+    }else{
+      sep('DEPENDENCIAS — FALTAN MÓDULOS');
+      lines.forEach(l=>l.trim()&&push(l, /FALTA|\[X\]|\[!\]/.test(l)?'err':''));
+      push('[!] Instalalas con:  bash scripts/setup.sh  (dentro de Kali)','warn');
+      openConsole();
+    }
+  }catch(e){ if(verbose)push('[ERROR] No se pudo chequear dependencias','err'); }
 }
 
 async function startWifiScan(){
@@ -923,7 +982,8 @@ function boot(){
     updateConn();
     switchCat('recon');
     push('[*] Terminal lista. Elegí una operación en las tarjetas y tocá EJECUTAR.','sys');
-    if(DEMO)push('[i] Modo demo: salida simulada. Servido por Flask usará datos reales.','warn');}
+    if(DEMO)push('[i] Modo demo: salida simulada. Servido por Flask usará datos reales.','warn');
+    checkHealth(false);}   // al abrir: avisa si falta instalar dependencias
 }
 buildDots();
 window.addEventListener('load',()=>setTimeout(boot,300));

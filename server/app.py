@@ -301,6 +301,46 @@ def stop_attack():
     return jsonify({"status": "stopped"})
 
 
+# ── 6c. Salud / recuperacion de la antena ────────────────────────────
+# Todas streamean su salida al SSE (se ven en la consola). 'reset' es el boton
+# anti-reboot: mata procesos colgados y devuelve la antena a monitor.
+@app.route("/api/antenna/status", methods=["POST"])
+def antenna_status():
+    """Reporta estado de la antena externa (modo, canal, driver, conflictos)."""
+    launch_asynchronous_attack("antenna.sh", ["status"])
+    return jsonify({"status": "started"})
+
+
+@app.route("/api/antenna/prepare", methods=["POST"])
+def antenna_prepare():
+    """Deja la antena en modo monitor (idempotente)."""
+    launch_asynchronous_attack("antenna.sh", ["prepare"])
+    return jsonify({"status": "started"})
+
+
+@app.route("/api/antenna/reset", methods=["POST"])
+def antenna_reset():
+    """Recupera la antena: mata procesos colgados y la devuelve a monitor."""
+    launch_asynchronous_attack("antenna.sh", ["reset"])
+    return jsonify({"status": "started"})
+
+
+# ── 6d. Health / dependencias ─────────────────────────────────────────
+@app.route("/api/health", methods=["GET"])
+def health():
+    """
+    Corre check_deps.sh y devuelve si estan todas las dependencias.
+    La app lo llama al abrir para avisar si falta instalar algo.
+    """
+    script = os.path.join(_SCRIPTS_DIR, "check_deps.sh")
+    try:
+        r = subprocess.run(["bash", script], capture_output=True, text=True, timeout=25)
+        report = _ANSI_RE.sub("", r.stdout or "")
+        return jsonify({"ok": r.returncode == 0, "report": report})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": False, "report": f"[ERROR] {exc}"}), 500
+
+
 # ── 7. Arranque ──────────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info("Iniciando servidor en http://0.0.0.0:5001")
