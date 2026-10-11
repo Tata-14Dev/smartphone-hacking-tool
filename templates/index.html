@@ -121,12 +121,18 @@
   .tlist::-webkit-scrollbar{width:6px}.tlist::-webkit-scrollbar-thumb{background:#2c2c2c}
   .net{border-bottom:1px solid #161616}
   .net-row{padding:11px 10px;cursor:pointer;font-size:12px;color:var(--ink);
-    display:flex;align-items:center;gap:8px}
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .net-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vbadge{flex:none;font-size:9px;letter-spacing:.5px;padding:1px 6px;border:1px solid;border-radius:2px}
+  .v-ok{color:#6ee7a8;border-color:#2e5a43}
+  .v-bad{color:var(--red-lit);border-color:#4a2320}
+  .v-warn{color:#e8c96a;border-color:#5a4e2e}
+  .v-dim{color:var(--dim);border-color:var(--edge)}
   .net-row .chev{color:var(--dim);font-size:10px;transition:.15s}
   .net.open .net-row .chev{transform:rotate(90deg)}
   .net.sel .net-row{background:rgba(226,59,47,.14);color:#fff;
     box-shadow:inset 2px 0 0 var(--red)}
-  .net-meta{color:var(--dim);font-size:10.5px}
+  .net-meta{color:var(--dim);font-size:10.5px;flex-basis:100%;padding-left:18px}
   .net-clients{display:none;background:#040404}
   .net.open .net-clients{display:block}
   .cli-row{padding:9px 10px 9px 26px;font-size:11.5px;color:var(--gray);cursor:pointer;
@@ -743,6 +749,21 @@ async function renderTargets(kind){
   if(!kind){fillTsel('deauth',data);fillTsel('eviltwin',data);return;}
   fillTsel(kind,data);
 }
+// Viabilidad de deauth por red: PMF (WPA3/802.11w) y DFS (5 GHz radar) lo bloquean.
+// Usa datos que ya trae el scan (privacy/auth/canal). No toca el backend.
+function viability(r){
+  const ch=parseInt(r.canal,10)||0;
+  const priv=(r.privacy||'').toUpperCase();
+  const auth=(r.auth||'').toUpperCase();
+  const dfs=(ch>=52&&ch<=64)||(ch>=100&&ch<=144);
+  if(priv.includes('OPN')||priv.trim()==='') return {label:'ABIERTA',cls:'v-dim',tip:'red abierta — no requiere deauth'};
+  const w3=priv.includes('WPA3')||auth.includes('SAE');
+  const w2=priv.includes('WPA2')||priv.includes('WPA ')||priv==='WPA'||auth.includes('PSK');
+  if(w3&&!w2) return {label:'PMF',cls:'v-bad',tip:'WPA3/802.11w — el deauth no funciona'};
+  if(dfs)     return {label:'DFS',cls:'v-bad',tip:'5 GHz DFS — inyección bloqueada'};
+  if(w3&&w2)  return {label:'WPA2/3',cls:'v-warn',tip:'transición — puede tener PMF'};
+  return {label:'VIABLE',cls:'v-ok',tip:'WPA/WPA2 — deauth viable'};
+}
 function fillTsel(kind,data){
   const box=document.getElementById('tlist_'+kind);
   if(!box)return;
@@ -768,8 +789,10 @@ function fillTsel(kind,data){
     const net=document.createElement('div');net.className='net';
     const row=document.createElement('div');row.className='net-row';
     const essid=r.essid&&r.essid!=='<oculta>'?r.essid:'<oculta>';
-    row.innerHTML='<span class="chev">▸</span><span>'+esc(essid)
-      +'</span><span class="net-meta">'+r.power+'dBm · CH'+r.canal+' · '+esc(r.bssid)+'</span>';
+    const v=(kind==='deauth')?viability(r):null;
+    const badge=v?('<span class="vbadge '+v.cls+'" title="'+esc(v.tip)+'">'+v.label+'</span>'):'';
+    row.innerHTML='<span class="chev">▸</span><span class="net-name">'+esc(essid)+'</span>'+badge
+      +'<span class="net-meta">'+r.power+'dBm · CH'+r.canal+' · '+esc(r.bssid)+'</span>';
     net.appendChild(row);
 
     if(kind==='deauth'){
@@ -795,6 +818,7 @@ function fillTsel(kind,data){
         document.getElementById('bssid').value=r.bssid;
         document.getElementById('client').value='FF:FF:FF:FF:FF:FF';
         setSel('deauth',esc(essid)+' ['+r.bssid+'] · broadcast');
+        if(v&&v.cls==='v-bad'){openConsole();push('[!] '+esc(essid)+' — '+v.tip,'warn');push('    Este objetivo probablemente NO caiga. Elegí uno marcado VIABLE para probar.','');}
       }else{
         document.getElementById('ssid').value=(essid==='<oculta>')?'':essid;
         setSel('eviltwin',esc(essid));
