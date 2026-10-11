@@ -207,29 +207,82 @@ Prioridad: Alta / Media / Baja · Estado: Pendiente / En desarrollo / Completado
 
 ---
 
-## 5. Casos de uso principales
+## 5. Casos de uso
 
-### CU-01: Reconocimiento WiFi
-**Actor:** Usuario · **Precondición:** antena externa enchufada (el monitor se activa solo).
-1. Abre RECON → RECONOCIMIENTO WIFI y ejecuta.
-2. El sistema prepara la antena en monitor automáticamente y escucha el aire (2.4+5 GHz).
-3. Muestra las redes reales (señal, canal, seguridad) y clientes; alimenta el selector de objetivos ofensivos.
+### 5.1 Diagrama de casos de uso
 
-### CU-02: Deauth dirigido
-**Actor:** Usuario · **Precondición:** scan previo.
-1. En OFENSIVAS → DEAUTH elige un AP de la lista (y opcional un cliente).
-2. El sistema fija el canal del AP y lanza el deauth.
-3. (En desarrollo) Antes, el sistema indica si el objetivo es viable (PMF/DFS).
+![Diagrama de casos de uso de WATCHDOG](img/use-cases.svg)
 
-### CU-03: Recuperar la antena
-**Actor:** Usuario · **Precondición:** algo quedó trabado (ej. evil twin dejó la antena en modo AP).
-1. SISTEMA → ANTENA → RESET.
-2. El sistema mata hostapd/airodump/aireplay/wifite y devuelve la antena a monitor, sin reiniciar.
+Actor principal: **Operador (Pentester)**. Las operaciones WiFi **«include»**
+*Gestionar antena* (preparar monitor / dejar en reposo), y *Ejecutar deauth*
+**«include»** además *Evaluar viabilidad* (PMF/DFS + test de inyección). *Escanear
+red / puertos* usa nmap sobre la red y no requiere la antena externa.
 
-### CU-04: Escaneo y (futuro) explotación de red
-**Actor:** Usuario · **Precondición:** conectado a la red objetivo.
-1. RECON → ESCANEO DE RED / PUERTOS (Nmap).
-2. (Futuro) el motor de decisión sugiere el mejor exploit; el usuario confirma.
+### 5.2 Trazabilidad CU → RF
+
+| CU | Caso de uso | Requerimientos relacionados |
+|---|---|---|
+| CU-01 | Reconocer redes WiFi | RF-WIFI-01, RF-WIFI-02, RF-SYS-02, RF-SYS-10 |
+| CU-02 | Escanear red / puertos | RF-NET-01, RF-NET-02, RF-NET-03 |
+| CU-03 | Ejecutar deauth | RF-WIFI-04, RF-SYS-07, RF-SYS-02, RF-SYS-10 |
+| CU-04 | Desplegar evil twin | RF-WIFI-05, RF-SYS-02, RF-SYS-10 |
+| CU-05 | Auditar con wifite | RF-WIFI-03, RF-WIFI-07, RF-SYS-02, RF-SYS-10 |
+| CU-06 | Gestionar antena | RF-SYS-02, RF-SYS-03, RF-SYS-10, RF-WIFI-08 |
+| CU-07 | Verificar dependencias | RF-SYS-04, RF-SYS-05 |
+
+### 5.3 Especificación de casos de uso
+
+#### CU-01 — Reconocer redes WiFi
+- **Actor:** Operador. **Precondición:** antena externa conectada por OTG.
+- **Flujo principal:**
+  1. RECON → RECONOCIMIENTO WIFI → EJECUTAR.
+  2. *«include» Gestionar antena:* el sistema deja la antena en modo monitor automáticamente.
+  3. airodump escucha el aire en 2.4 y 5 GHz durante N segundos.
+  4. Parsea y muestra las redes (señal, canal, seguridad) y clientes; guarda el resultado.
+  5. *«include» Gestionar antena:* al terminar, deja la antena en reposo (radio apagada).
+- **Postcondición:** lista de objetivos disponible para las operaciones ofensivas.
+
+#### CU-02 — Escanear red / puertos
+- **Actor:** Operador. **Precondición:** teléfono conectado a la red objetivo.
+- **Flujo principal:** RECON → ESCANEO DE RED / PUERTOS → ingresa rango o host → nmap →
+  muestra hosts activos, puertos abiertos y versiones de servicios.
+- **Postcondición:** inventario de hosts/servicios. *(No usa la antena externa.)*
+
+#### CU-03 — Ejecutar deauth
+- **Actor:** Operador. **Precondición:** reconocimiento WiFi previo.
+- **Flujo principal:**
+  1. OFENSIVAS → DEAUTH → elige un AP de la lista (y opcional un cliente).
+  2. *«include» Evaluar viabilidad:* el sistema marca el objetivo (VIABLE / PMF / DFS) y, si se pide, corre el test de inyección.
+  3. *«include» Gestionar antena:* prepara monitor y fija el canal del AP.
+  4. aireplay inyecta las tramas de desautenticación (dirigido o broadcast).
+  5. El operador corta con ABORTAR; *«include» Gestionar antena* deja la antena en reposo.
+- **Flujo alternativo:** si el objetivo es PMF o DFS, el sistema lo advierte antes de atacar.
+- **Postcondición:** el/los clientes del AP pierden la conexión mientras dura el ataque.
+
+#### CU-04 — Desplegar evil twin
+- **Actor:** Operador. **Precondición:** scan previo (SSID objetivo).
+- **Flujo principal:** OFENSIVAS → EVIL TWIN → elige un SSID → hostapd levanta el AP falso →
+  corre indefinidamente hasta ABORTAR → *«include» Gestionar antena* deja la antena en reposo.
+- **Postcondición:** AP gemelo activo mientras dura; se corta con ABORTAR / WD-STOP-ATK.
+
+#### CU-05 — Auditar con wifite
+- **Actor:** Operador. **Precondición:** antena conectada.
+- **Flujo principal:** OFENSIVAS → WIFITE AUTO → wifite audita las redes al alcance,
+  captura y prueba handshakes → *«include» Gestionar antena* deja la antena en reposo.
+- **Postcondición:** handshakes almacenados; claves descifradas si las hubo.
+
+#### CU-06 — Gestionar antena
+- **Actor:** Operador (o invocado por «include» de las operaciones WiFi).
+- **Flujo principal:** SISTEMA → ANTENA → ESTADO / PREPARAR / RESET.
+  **RESET** mata procesos colgados (hostapd/airodump/aireplay/wifite) y restaura monitor
+  sin reiniciar el teléfono.
+- **Postcondición:** antena en el estado deseado (monitor o reposo).
+
+#### CU-07 — Verificar dependencias
+- **Actor:** Operador (y automático al abrir la app).
+- **Flujo principal:** al abrir, o SISTEMA → DEPENDENCIAS → CHEQUEAR → check_deps.sh informa
+  qué falta; `setup.sh` instala/actualiza.
+- **Postcondición:** el operador sabe si el entorno está completo.
 
 ---
 

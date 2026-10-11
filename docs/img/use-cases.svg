@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 660" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="inc" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto">
+      <path d="M1,1 L9,5 L1,9" fill="none" stroke="#94a3b8" stroke-width="1.4"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="920" height="660" fill="#ffffff"/>
+  <text x="460" y="34" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">Diagrama de casos de uso — WATCHDOG</text>
+
+  <!-- Limite del sistema -->
+  <rect x="235" y="60" width="650" height="548" rx="14" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="560" y="90" text-anchor="middle" font-size="16" font-weight="700" letter-spacing="3" fill="#334155">WATCHDOG</text>
+
+  <!-- Actor -->
+  <g stroke="#334155" stroke-width="2" fill="none">
+    <circle cx="95" cy="250" r="16" fill="#334155" stroke="none"/>
+    <line x1="95" y1="266" x2="95" y2="322"/>
+    <line x1="66" y1="288" x2="124" y2="288"/>
+    <line x1="95" y1="322" x2="74" y2="358"/>
+    <line x1="95" y1="322" x2="116" y2="358"/>
+  </g>
+  <text x="95" y="382" text-anchor="middle" font-size="14" font-weight="600" fill="#0f172a">Operador</text>
+  <text x="95" y="400" text-anchor="middle" font-size="12" fill="#475569">(Pentester)</text>
+
+  <!-- Asociaciones actor -> casos de uso -->
+  <g stroke="#64748b" stroke-width="1.3">
+    <line x1="124" y1="298" x2="284" y2="135"/>
+    <line x1="124" y1="298" x2="284" y2="210"/>
+    <line x1="124" y1="300" x2="284" y2="325"/>
+    <line x1="124" y1="300" x2="284" y2="400"/>
+    <line x1="124" y1="300" x2="284" y2="475"/>
+    <line x1="124" y1="302" x2="284" y2="560"/>
+    <line x1="124" y1="300" x2="622" y2="255"/>
+  </g>
+
+  <!-- Relaciones «include» (punteadas) -->
+  <g stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="6 5" marker-end="url(#inc)" fill="none">
+    <line x1="480" y1="135" x2="614" y2="245"/>
+    <line x1="480" y1="325" x2="614" y2="258"/>
+    <line x1="480" y1="400" x2="614" y2="265"/>
+    <line x1="480" y1="475" x2="614" y2="272"/>
+    <line x1="480" y1="330" x2="614" y2="392"/>
+  </g>
+
+  <!-- Casos de uso: columna central -->
+  <g>
+    <ellipse cx="382" cy="135" rx="98" ry="30" fill="#f8fafc" stroke="#475569" stroke-width="1.4"/>
+    <text x="382" y="140" text-anchor="middle" font-size="13.5" fill="#1f2937">Reconocer redes WiFi</text>
+
+    <ellipse cx="382" cy="210" rx="98" ry="30" fill="#f8fafc" stroke="#475569" stroke-width="1.4"/>
+    <text x="382" y="215" text-anchor="middle" font-size="13.5" fill="#1f2937">Escanear red / puertos</text>
+
+    <ellipse cx="382" cy="325" rx="98" ry="30" fill="#fdecea" stroke="#c0392b" stroke-width="1.6"/>
+    <text x="382" y="330" text-anchor="middle" font-size="13.5" fill="#7b241c">Ejecutar deauth</text>
+
+    <ellipse cx="382" cy="400" rx="98" ry="30" fill="#fdecea" stroke="#c0392b" stroke-width="1.6"/>
+    <text x="382" y="405" text-anchor="middle" font-size="13.5" fill="#7b241c">Desplegar evil twin</text>
+
+    <ellipse cx="382" cy="475" rx="98" ry="30" fill="#fdecea" stroke="#c0392b" stroke-width="1.6"/>
+    <text x="382" y="480" text-anchor="middle" font-size="13.5" fill="#7b241c">Auditar con wifite</text>
+
+    <ellipse cx="382" cy="560" rx="98" ry="30" fill="#f8fafc" stroke="#475569" stroke-width="1.4"/>
+    <text x="382" y="565" text-anchor="middle" font-size="13.5" fill="#1f2937">Verificar dependencias</text>
+  </g>
+
+  <!-- Casos de uso: columna derecha (incluidos) -->
+  <g>
+    <ellipse cx="720" cy="255" rx="100" ry="34" fill="#eef4fb" stroke="#2c5a7c" stroke-width="1.4"/>
+    <text x="720" y="252" text-anchor="middle" font-size="13.5" fill="#1f2937">Gestionar antena</text>
+    <text x="720" y="270" text-anchor="middle" font-size="11.5" fill="#475569">(preparar · recuperar)</text>
+
+    <ellipse cx="720" cy="400" rx="100" ry="34" fill="#eef4fb" stroke="#2c5a7c" stroke-width="1.4"/>
+    <text x="720" y="397" text-anchor="middle" font-size="13.5" fill="#1f2937">Evaluar viabilidad</text>
+    <text x="720" y="415" text-anchor="middle" font-size="11.5" fill="#475569">(PMF · DFS)</text>
+  </g>
+
+  <!-- Leyenda -->
+  <g font-size="12" fill="#475569">
+    <line x1="250" y1="636" x2="292" y2="636" stroke="#64748b" stroke-width="1.3"/>
+    <text x="300" y="640">asociación</text>
+    <line x1="420" y1="636" x2="462" y2="636" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="6 5" marker-end="url(#inc)"/>
+    <text x="474" y="640">&#171;include&#187;</text>
+  </g>
+</svg>

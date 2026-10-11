@@ -1,62 +1,129 @@
-# WATCHDOG — Watch Dogs Phone
+<div align="center">
 
-Framework de auditoría/pentesting de redes inspirado en el teléfono de *Watch Dogs*,
-sobre un **Samsung Galaxy S10 con Kali NetHunter**. Un servidor Flask corre dentro
-del chroot de Kali y expone una **interfaz web (PWA)** con estética Watch Dogs, que
-funciona **sin internet** (modo avión) y se instala como app a pantalla completa.
+<img src="docs/img/logo.png" alt="WATCHDOG" width="170">
 
-> ⚠️ **Uso autorizado únicamente.** Esta herramienta es para auditar **redes y
-> dispositivos propios o con autorización explícita**. El uso no autorizado es
-> delito en la mayoría de las jurisdicciones. Los autores no se responsabilizan
-> por el mal uso.
+# WATCHDOG
 
-## Qué hace (hoy)
-- **Reconocimiento WiFi** (2.4 y 5 GHz): redes, señal, canal, seguridad y clientes.
-- **Escaneo de red/puertos** con Nmap (hosts, puertos, versiones de servicios).
-- **Operaciones ofensivas** (sobre redes propias/lab): deauth, evil twin, wifite.
-- **Salud de antena**: prepara monitor solo; botón de **RESET** que recupera la
-  antena sin reiniciar el teléfono.
-- **Chequeo de dependencias** al abrir + instalador (`setup.sh`).
-- **100% offline**: todo local en `localhost`, sin requests a internet.
+**Teléfono de auditoría de redes inspirado en Watch Dogs. Reconocimiento y pentesting WiFi desde un Samsung Galaxy S10 con Kali NetHunter, operado desde una interfaz web que corre 100% local y sin internet.**
 
-## Arquitectura (resumen)
-El "motor" (aircrack, nmap, hostapd, wifite) corre **como root dentro del chroot de
-Kali** sobre una **antena externa RTL8812AU** (`wlan2`, modo monitor). La UI es una
-PWA servida por Flask en `localhost:5001` — un control remoto local del backend.
-El WiFi interno del teléfono no se toca. Detalle completo en
-[`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md).
+![estado](https://img.shields.io/badge/estado-en%20desarrollo-E23B2F)
+![plataforma](https://img.shields.io/badge/plataforma-Kali%20NetHunter-2B2B2B)
+![interfaz](https://img.shields.io/badge/interfaz-PWA%20offline-63D2E8)
 
-## Requisitos
-- Galaxy S10 (u otro device NetHunter) con Kali NetHunter.
-- Antena WiFi externa con chipset **RTL8812AU** (monitor + inyección).
-- Ver dependencias y setup en [`docs/setup.md`](docs/setup.md).
+</div>
 
-## Inicio rápido
+> **Uso autorizado únicamente.** Herramienta para auditar redes y dispositivos **propios o con autorización explícita**. El uso sobre redes ajenas sin permiso es ilegal en la mayoría de las jurisdicciones. Los autores no se responsabilizan por el mal uso.
+
+<div align="center">
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/img/screenshot-ofensivas.png" alt="Operaciones ofensivas" width="300"><br><sub><b>Selección de objetivos</b> — semáforo de viabilidad (PMF / DFS)</sub></td>
+<td align="center" width="50%"><img src="docs/img/screenshot-consola.png" alt="Consola en vivo" width="300"><br><sub><b>Consola en vivo</b> — test de inyección al 100%</sub></td>
+</tr>
+</table>
+</div>
+
+---
+
+## El proyecto
+
+WATCHDOG convierte un teléfono con Kali NetHunter en una herramienta de auditoría de red portátil y autosuficiente. Un servidor Flask corre dentro del chroot de Kali y ejecuta las herramientas reales (aircrack-ng, nmap, hostapd, wifite) sobre una antena WiFi externa; la interfaz es una web con estética Watch Dogs que se sirve en `localhost`, se instala como aplicación a pantalla completa y funciona en modo avión.
+
+El motor vive en Kali —el único lugar con root y acceso a la antena en modo monitor— y la interfaz es siempre un control remoto local de ese backend. La premisa de diseño es que el aparato cumpla su objetivo **sin depender de ninguna red externa**.
+
+---
+
+## Qué hace
+
+| Capacidad | Detalle | Estado |
+|---|---|---|
+| Reconocimiento WiFi | Redes en 2.4 y 5 GHz: señal, canal, seguridad y clientes | Funcional |
+| Escaneo de red | Hosts, puertos y versiones de servicios (nmap) | Funcional |
+| Deauth | Desautenticación dirigida, fijando el canal del objetivo | Confirmado en hardware |
+| Evil twin / Wifite | AP falso (hostapd) y auditoría automatizada de handshakes | En desarrollo |
+| Semáforo de viabilidad | Marca por objetivo si el ataque es viable: detecta **PMF/802.11w** y canales **DFS**, más un **test de inyección** real | Funcional |
+| Antena automática | Se prepara en monitor al operar y queda en **reposo** (radio apagada) al terminar; botón de recuperación sin reiniciar el teléfono | Funcional |
+| 100% offline | Todo local en `localhost`, sin requests a internet; PWA instalable | Funcional |
+
+---
+
+## Arquitectura
+
+El trabajo pesado corre como root dentro del chroot de Kali, sobre una antena externa **RTL8812AU** (`wlan2`, modo monitor + inyección). La interfaz web solo habla con ese backend por HTTP y SSE. El WiFi interno del teléfono no se toca.
+
+```
+┌───────────────────────── Samsung Galaxy S10 ─────────────────────────┐
+│                                                                       │
+│   PWA (WebView, localhost:5001)  ⇄  Servidor Flask (chroot Kali)      │
+│   offline · instalable                 app.py + módulos               │
+│                                              │                        │
+│                                   nmap · aircrack-ng · hostapd        │
+│                                   dnsmasq · wifite · iw               │
+│                                              │ USB-OTG                 │
+│                                   Antena externa RTL8812AU (wlan2)     │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+```
+smartphone-hacking-tool/
+├── server/
+│   ├── app.py                # orquestador Flask (puerto 5001)
+│   ├── modules/              # network.py, wifi_scan.py, (stubs a futuro)
+│   ├── static/               # PWA: fuentes, iconos, manifest, service worker
+│   └── templates/index.html  # interfaz Watch Dogs
+├── scripts/
+│   ├── setup.sh              # instalador de dependencias
+│   └── kali-scripts/         # antenna.sh, check_deps.sh, wifi_*.sh (corren en Kali)
+└── docs/                     # REQUIREMENTS.md (SRS), setup.md
+```
+
+---
+
+## Instalación
+
+Dentro del chroot de Kali, como root:
+
 ```bash
-# dentro del chroot de Kali, como root:
 cd /root/watchdog-git
-bash scripts/setup.sh                 # instala/actualiza dependencias (necesita internet)
-cd server && python3 app.py           # arranca el server en localhost:5001
-```
-Después, abrí `http://localhost:5001` en el navegador del teléfono. Para instalarlo
-como app a pantalla completa (incluso en teléfonos de-Googled), ver `docs/setup.md`.
-
-## Estado del proyecto
-En desarrollo activo, organizado por milestones (ver roadmap en `docs/REQUIREMENTS.md`):
-**M1 (PWA/offline) ✅ · M2 (core ofensivo confiable) 🚧 · M3 defensivo · M4 módulos
-+ motor de decisión · M5 portabilidad.**
-
-## Estructura
-```
-server/        # Flask (app.py) + módulos (network.py, wifi_scan.py, …)
-  static/      # PWA: fuentes, iconos, manifest, service worker
-  templates/   # index.html (UI Watch Dogs)
-scripts/
-  setup.sh             # instalador de dependencias
-  kali-scripts/        # corren dentro de Kali (antenna.sh, check_deps.sh, wifi_*.sh, …)
-  termux-shortcuts/    # widgets WD-* para Termux
-docs/          # REQUIREMENTS.md (SRS), setup.md
+bash scripts/setup.sh          # instala/actualiza dependencias (requiere internet solo acá)
+cd server && python3 app.py    # sirve la interfaz en localhost:5001
 ```
 
-## Flujo de trabajo (Git)
-`develop` (se prueba en el teléfono) → confirmado → `main` (estable, el que se clona).
+Luego se abre `http://localhost:5001` en el navegador del teléfono. Para instalarla como app a pantalla completa (incluso en teléfonos de-Googled, sin Google Play Services), la guía completa está en [`docs/setup.md`](docs/setup.md).
+
+---
+
+## Estado y roadmap
+
+El proyecto avanza por milestones. Detalle y requerimientos en [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md).
+
+| Milestone | Contenido | Estado |
+|---|---|---|
+| M1 | PWA + offline total (fuentes embebidas, service worker, instalable) | Completado |
+| M2 | Core ofensivo confiable (antena automática, semáforo PMF/DFS, deauth confirmado) | En curso |
+| M3 | Core defensivo (WIDS: evil twins, deauth floods, rogue APs) | Pendiente |
+| M4 | Módulos restantes (Bluetooth, NFC, HID) + motor de decisión | Pendiente |
+| M5 | Portabilidad a varios dispositivos NetHunter | Pendiente |
+
+---
+
+## Stack
+
+Python · Flask · HTML/CSS/JS (PWA, service worker, SSE) · aircrack-ng · nmap · hostapd · dnsmasq · wifite · iw.
+Hardware: Samsung Galaxy S10 con Kali NetHunter + antena RTL8812AU.
+
+---
+
+## Autor
+
+**Tomás Uriel Salinas** (Tata-14Dev)
+
+- GitHub: [Tata-14Dev](https://github.com/Tata-14Dev)
+- LinkedIn: [tomas-uriel-salinas](https://www.linkedin.com/in/tomas-uriel-salinas-353b782a8)
+- Email: [tomassalinas.u@hotmail.com](mailto:tomassalinas.u@hotmail.com)
+
+---
+
+<div align="center">
+<sub>Proyecto de investigación en seguridad. Úsese de forma ética y legal, solo sobre infraestructura propia o con autorización escrita.</sub>
+</div>
