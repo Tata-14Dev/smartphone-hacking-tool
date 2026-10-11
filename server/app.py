@@ -337,6 +337,23 @@ def antenna_reset():
     return jsonify({"status": "started"})
 
 
+@app.route("/api/antenna/inject", methods=["POST"])
+def antenna_inject():
+    """Test de inyección contra un AP (aireplay --test). Body: {bssid, channel?}"""
+    data = request.get_json(silent=True) or {}
+    bssid = data.get("bssid")
+    if not bssid:
+        return jsonify({"error": "Se requiere el BSSID"}), 400
+    channel = str(data.get("channel", "")).strip()
+    if not channel:
+        for red in wifi.last_result.get("redes", []):
+            if str(red.get("bssid", "")).upper() == str(bssid).upper():
+                channel = str(red.get("canal", "")).strip()
+                break
+    launch_asynchronous_attack("antenna.sh", ["inject", bssid, channel])
+    return jsonify({"status": "started"})
+
+
 # ── 6d. Health / dependencias ─────────────────────────────────────────
 @app.route("/api/health", methods=["GET"])
 def health():

@@ -140,10 +140,34 @@ do_idle() {
     echo -e "${GREEN}[OK] $IFACE fuera de monitor y en reposo (radio apagada).${NC}"
 }
 
+# Test de inyección contra un AP: confirma que las tramas llegan (y que estás en
+# el canal correcto) ANTES de lanzar el ataque. aireplay-ng --test -a <BSSID>
+# manda tramas y mide qué % responde el AP. 0% = canal/banda equivocada o lejos.
+do_inject() {
+    local BSSID="$1" CH="$2"
+    if [ -z "$BSSID" ]; then echo -e "${RED}[X] Falta el BSSID.${NC}"; return 1; fi
+    echo -e "${CYAN}[*] Test de inyección contra $BSSID (canal ${CH:-actual})...${NC}"
+    IFACE=$(detect_iface)
+    if [ -z "$IFACE" ]; then echo -e "${RED}[X] No se detectó antena.${NC}"; return 1; fi
+    set_monitor "$IFACE"
+    if [ -n "$CH" ]; then
+        iw dev "$IFACE" set channel "$CH" 2>/dev/null \
+            && echo -e "${GREEN}[OK] Canal fijado en $CH.${NC}" \
+            || echo -e "${YELLOW}[!] No se pudo fijar el canal $CH (¿DFS?).${NC}"
+    fi
+    echo -e "${CYAN}[*] Enviando tramas de prueba (10s)...${NC}"; echo ""
+    timeout 12 aireplay-ng --test -a "$BSSID" "$IFACE" 2>&1 | sed 's/^/    /'
+    echo ""
+    echo -e "${CYAN}[i] % alto = la inyección llega al AP (podés atacar).${NC}"
+    echo -e "${CYAN}    0% = canal/banda equivocada, fuera de alcance, o DFS.${NC}"
+    do_idle
+}
+
 case "$1" in
     prepare)   do_prepare ;;
     reset)     do_reset ;;
     idle|off)  do_idle ;;
+    inject)    do_inject "$2" "$3" ;;
     status|"") show_status ;;
-    *) echo -e "${RED}Uso: antenna.sh [status|prepare|reset|idle]${NC}"; exit 1 ;;
+    *) echo -e "${RED}Uso: antenna.sh [status|prepare|reset|idle|inject <BSSID> <CH>]${NC}"; exit 1 ;;
 esac

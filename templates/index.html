@@ -287,6 +287,7 @@
           <label>CLIENTE<input id="client" value="FF:FF:FF:FF:FF:FF" spellcheck="false"></label>
           <label>TRAMAS<input id="count" value="20" spellcheck="false"></label>
           <div class="spacer"></div>
+          <button class="btn exec" data-act="inject-test">▸ TEST DE INYECCIÓN</button>
           <button class="btn exec" data-op="deauth">▸ EJECUTAR</button>
         </article>
 
@@ -646,6 +647,7 @@ document.querySelectorAll('.exec').forEach(b=>{
     if(act==='antenna-prepare')return antennaOp('prepare');
     if(act==='antenna-reset')return antennaOp('reset');
     if(act==='deps')return checkHealth(true);
+    if(act==='inject-test')return injectTest();
     const op=b.dataset.op; mode=op;
     if(op==='netscan'||op==='portscan')return runScan(op);
     if(op==='deauth')return startDeauth();
@@ -839,6 +841,21 @@ function setSel(kind,txt){document.getElementById('sel_'+kind).innerHTML='objeti
 function esc(s){return String(s==null?'':s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
 
 /* ============ OPERACIONES OFENSIVAS (redes autorizadas) ============ */
+// Test de inyección contra el AP elegido: confirma que las tramas llegan antes de atacar.
+async function injectTest(){
+  const bssid=document.getElementById('bssid').value.trim();
+  if(!bssid){push('[ERROR] Elegí/ingresá un BSSID primero','err');openConsole();return;}
+  sep('TEST DE INYECCIÓN');setRunning(true);
+  if(simMode){push('[SIMULACIÓN] sin backend real','warn');setRunning(false);return;}
+  try{
+    const r=await fetch('/api/antenna/inject',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({bssid})});
+    const j=await r.json();
+    if(j.error){push('[ERROR] '+j.error,'err');setRunning(false);return;}
+    openStream();
+  }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN','err');setRunning(false);}
+}
+
 async function startDeauth(){
   const bssid=document.getElementById('bssid').value.trim();
   if(!bssid){push('[ERROR] Se requiere el BSSID del AP objetivo','err');openConsole();return;}
