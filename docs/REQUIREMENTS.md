@@ -115,7 +115,7 @@ Prioridad: Alta / Media / Baja · Estado: Pendiente / En desarrollo / Completado
 | RF-WIFI-01 | Escanear redes WiFi (SSID, BSSID, canal, señal, encriptación) en 2.4 y 5 GHz | Alta | **Completado** |
 | RF-WIFI-02 | Poner la antena externa en modo monitor (automático al operar) | Alta | **Completado** |
 | RF-WIFI-03 | Capturar handshakes WPA/WPA2 de redes objetivo | Alta | En desarrollo (wifite; sin validar en HW) |
-| RF-WIFI-04 | Ejecutar deauth contra clientes/AP (fijando el canal del objetivo) | Alta | En desarrollo (falta confirmar en HW) |
+| RF-WIFI-04 | Ejecutar deauth contra clientes/AP (fijando el canal del objetivo) | Alta | **Completado** (confirmado en hardware contra un cliente real) |
 | RF-WIFI-05 | Crear Evil Twin (hostapd) con el SSID de una red objetivo | Media | En desarrollo |
 | RF-WIFI-06 | MITM sobre clientes conectados al Evil Twin | Media | Pendiente |
 | RF-WIFI-07 | Crackear handshakes capturados con diccionarios | Media | En desarrollo (wifite) |

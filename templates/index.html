@@ -548,9 +548,12 @@ function classify(t){
   if(/^\[\*\]|^\[OK\]|Starting Nmap|Nmap done/i.test(t))return 'sys';
   return '';
 }
+const MAX_LINES=500;   // tope de lineas en consola: evita que un deauth continuo
+                       // (cientos de lineas/seg) infle el DOM y congele la UI.
+function trimOut(){while(out.childElementCount>MAX_LINES)out.removeChild(out.firstChild);}
 function push(text,cls){const div=document.createElement('div');
   div.className='ln '+(cls||classify(text));div.textContent=text;
-  out.appendChild(div);out.scrollTop=out.scrollHeight;}
+  out.appendChild(div);trimOut();out.scrollTop=out.scrollHeight;}
 function clearOut(){out.innerHTML='';}
 // Separador de flujo: NO borra la consola, marca el inicio de una operacion nueva.
 function sep(t){
@@ -923,14 +926,30 @@ async function runScan(op){
     openStream();
   }catch(e){markSim();push('[ERROR] No se pudo contactar el servidor — MODO SIMULACIÓN (sin datos reales)','err');simulate(target);}
 }
+// Bufferizamos las lineas del stream y las volcamos de a lotes (1 vez por frame).
+// Un deauth continuo escupe cientos de lineas/seg; appendear una por una (con
+// scroll en cada una) congelaba la UI y por eso ABORTAR no respondia.
+let _sbuf=[], _sraf=0;
+function flushStream(){
+  _sraf=0;
+  if(!_sbuf.length)return;
+  const frag=document.createDocumentFragment();
+  for(const t of _sbuf){const d=document.createElement('div');d.className='ln '+classify(t);d.textContent=t;frag.appendChild(d);}
+  _sbuf.length=0;
+  out.appendChild(frag);trimOut();out.scrollTop=out.scrollHeight;
+}
 function openStream(){
   currentSource=new EventSource('/stream');
   currentSource.onmessage=ev=>{
-    if(ev.data==='__DONE__'){push('── PROCESO FINALIZADO ──','sys');closeStream();return;}
-    push(ev.data);};
-  currentSource.onerror=()=>{push('[!] Stream interrumpido','warn');closeStream();};
+    if(ev.data==='__DONE__'){flushStream();push('── PROCESO FINALIZADO ──','sys');closeStream();return;}
+    _sbuf.push(ev.data);
+    if(!_sraf)_sraf=requestAnimationFrame(flushStream);
+  };
+  currentSource.onerror=()=>{flushStream();push('[!] Stream interrumpido','warn');closeStream();};
 }
 function closeStream(){
+  if(_sraf){cancelAnimationFrame(_sraf);_sraf=0;}
+  flushStream();                                   // volcar lo que haya quedado en el buffer
   if(currentSource){currentSource.close();currentSource=null;}
   setRunning(false);
   if(lastWasScan){lastWasScan=false;_tcache=null;renderTargets();}  // recon terminado → refrescar objetivos
