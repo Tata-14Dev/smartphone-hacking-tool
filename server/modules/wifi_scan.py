@@ -173,6 +173,25 @@ class WifiScanner:
         except Exception as exc:  # noqa: BLE001
             self._on_line(f"[!] No se pudo preparar la antena automaticamente: {exc}")
 
+    def _antenna_idle(self) -> None:
+        """Al terminar: saca la antena de monitor y apaga la radio (ahorro de bateria)."""
+        try:
+            r = subprocess.run(
+                ["bash", _ANTENNA_SH, "idle"],
+                capture_output=True, text=True, timeout=20,
+            )
+            for ln in (r.stdout or "").splitlines():
+                ln = _ANSI.sub("", ln).rstrip()
+                if ln:
+                    self._on_line(ln)
+        except Exception as exc:  # noqa: BLE001
+            self._on_line(f"[!] No se pudo poner la antena en reposo: {exc}")
+
+    def _finish(self) -> None:
+        """Cierre comun de un escaneo: antena a reposo y senal de fin a la UI."""
+        self._antenna_idle()
+        self._on_line("__DONE__")
+
     def _scan(self, seconds: int, prefix: str) -> None:
         # Auto-preparar la antena (monitor) antes de nada: cero pasos manuales.
         self._ensure_monitor()
@@ -204,12 +223,12 @@ class WifiScanner:
                 proc.kill()
         except FileNotFoundError:
             self._on_line("[ERROR] airodump-ng no encontrado")
-            self._on_line("__DONE__")
+            self._finish()
             return
         except Exception as exc:  # noqa: BLE001
             log.exception("Fallo en el escaneo")
             self._on_line(f"[ERROR] {exc}")
-            self._on_line("__DONE__")
+            self._finish()
             return
 
         # airodump agrega -01 al prefijo
@@ -218,13 +237,13 @@ class WifiScanner:
             data = parse_airodump_csv(csv_path)
         except FileNotFoundError:
             self._on_line("[ERROR] No se genero el CSV (¿interfaz en monitor?)")
-            self._on_line("__DONE__")
+            self._finish()
             return
 
         # Guardamos el resultado para que la UI pueda ofrecerlo como objetivos.
         self.last_result = data
         self._report(data)
-        self._on_line("__DONE__")
+        self._finish()
 
     def _report(self, data: Dict[str, List[dict]]) -> None:
         redes = data["redes"]

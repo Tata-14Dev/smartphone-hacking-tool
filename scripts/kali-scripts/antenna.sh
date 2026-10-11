@@ -125,9 +125,25 @@ do_reset() {
     show_status
 }
 
+# Pone la antena EN REPOSO al terminar de usarla: fuera de monitor + radio apagada
+# (ip link down) para no gastar bateria/recursos. Se reactiva sola en la proxima
+# operacion (auto-prepare). No toca la interfaz interna.
+do_idle() {
+    echo -e "${CYAN}[*] Poniendo la antena en reposo (ahorro de bateria)...${NC}"
+    IFACE=$(detect_iface)
+    if [ -z "$IFACE" ]; then
+        echo -e "${YELLOW}[!] No hay antena detectada (¿ya desconectada?).${NC}"; return 0
+    fi
+    ip link set "$IFACE" down 2>/dev/null
+    iw dev "$IFACE" set type managed 2>/dev/null
+    # La dejamos DOWN a proposito: radio apagada, sin captura en monitor.
+    echo -e "${GREEN}[OK] $IFACE fuera de monitor y en reposo (radio apagada).${NC}"
+}
+
 case "$1" in
-    prepare) do_prepare ;;
-    reset)   do_reset ;;
+    prepare)   do_prepare ;;
+    reset)     do_reset ;;
+    idle|off)  do_idle ;;
     status|"") show_status ;;
-    *) echo -e "${RED}Uso: antenna.sh [status|prepare|reset]${NC}"; exit 1 ;;
+    *) echo -e "${RED}Uso: antenna.sh [status|prepare|reset|idle]${NC}"; exit 1 ;;
 esac

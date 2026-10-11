@@ -188,6 +188,7 @@ Prioridad: Alta / Media / Baja · Estado: Pendiente / En desarrollo / Completado
 | RF-SYS-07 | Indicar por objetivo si el ataque es viable (PMF/802.11w, canal DFS, test de inyección) | Alta | En desarrollo (PMF/DFS ✓ en la UI; test de inyección pendiente) |
 | RF-SYS-08 | Foolproof: nunca operar sobre la interfaz interna ni cortar la conexión del operador sin intención | Alta | **Completado** (parcial; se refina) |
 | RF-SYS-09 | Portabilidad: config central (interfaz/rutas/puerto) para correr en varios devices NetHunter | Media | Pendiente (M5) |
+| RF-SYS-10 | Al terminar una operación (o al abortar), sacar la antena de monitor y apagar la radio (ahorro de batería/recursos) | Alta | **Completado** (M2) |
 
 ---
 

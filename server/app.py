@@ -298,6 +298,18 @@ def stop_attack():
         log.warning("Fallo al detener proceso: %s", exc)
         return jsonify({"error": str(exc)}), 500
     output_queue.put("[!] Proceso detenido por el usuario")
+    # Al abortar (sobre todo evil twin, que deja la antena en modo AP) la ponemos
+    # en reposo: fuera de monitor/AP y radio apagada (ahorro de bateria).
+    try:
+        r = subprocess.run(
+            ["bash", os.path.join(_SCRIPTS_DIR, "antenna.sh"), "idle"],
+            capture_output=True, text=True, timeout=15,
+        )
+        for ln in _ANSI_RE.sub("", r.stdout or "").splitlines():
+            if ln.strip():
+                output_queue.put(ln)
+    except Exception:  # noqa: BLE001
+        pass
     return jsonify({"status": "stopped"})
 
 

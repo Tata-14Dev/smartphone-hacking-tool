@@ -89,12 +89,12 @@ start_audit() {
         echo -e "${YELLOW}[!] La sesión finalizó sin claves descifradas (Handshakes almacenados).${NC}"
     fi
 
-    # 6. Restauración limpia del hardware
-    echo -e "${CYAN}[*] Devolviendo la antena $IFACE a modo managed...${NC}"
+    # 6. Reposo: sacar de monitor y apagar la radio (ahorro de bateria).
+    echo -e "${CYAN}[*] Poniendo la antena $IFACE en reposo...${NC}"
     ip link set "$IFACE" down 2>/dev/null
     iw dev "$IFACE" set type managed 2>/dev/null
-    ip link set "$IFACE" up 2>/dev/null
-    echo -e "${GREEN}[OK] Proceso finalizado. Hardware restaurado.${NC}"
+    # Se deja DOWN a proposito (radio apagada). Se reactiva sola en la proxima operacion.
+    echo -e "${GREEN}[OK] Proceso finalizado. Antena en reposo (radio apagada).${NC}"
 }
 
 # Validación de privilegios

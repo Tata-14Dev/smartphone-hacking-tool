@@ -921,6 +921,7 @@ function closeStream(){
 function abortScan(){
   push('[!] Enviando señal de aborto...','warn');
   if(!DEMO){fetch('/api/stop',{method:'POST'}).catch(()=>{});}
+  push('[!] Antena puesta en reposo (fuera de monitor).','');
   closeStream();
 }
 

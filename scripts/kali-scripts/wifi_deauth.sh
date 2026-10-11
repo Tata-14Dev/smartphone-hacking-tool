@@ -72,3 +72,9 @@ fi
 
 echo ""
 echo -e "${GREEN}[OK] Ataque de desautenticacion finalizado.${NC}"
+
+# Reposo: sacar la antena de monitor y apagar la radio (ahorro de bateria).
+echo -e "${CYAN}[*] Poniendo la antena en reposo...${NC}"
+ip link set "$IFACE" down 2>/dev/null
+iw dev "$IFACE" set type managed 2>/dev/null
+echo -e "${GREEN}[OK] $IFACE fuera de monitor (radio apagada).${NC}"
