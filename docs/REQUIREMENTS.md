@@ -189,6 +189,7 @@ Prioridad: Alta / Media / Baja · Estado: Pendiente / En desarrollo / Completado
 | RF-SYS-08 | Foolproof: nunca operar sobre la interfaz interna ni cortar la conexión del operador sin intención | Alta | **Completado** (parcial; se refina) |
 | RF-SYS-09 | Portabilidad: config central (interfaz/rutas/puerto) para correr en varios devices NetHunter | Media | Pendiente (M5) |
 | RF-SYS-10 | Al terminar una operación (o al abortar), sacar la antena de monitor y apagar la radio (ahorro de batería/recursos) | Alta | **Completado** (M2) |
+| RF-SYS-11 | Pivot de banda: ante un objetivo DFS/PMF, sugerir el mismo SSID en un BSSID inyectable (2.4 GHz o 5 GHz no-DFS) para atacar ahí sin tocar DFS | Media | **Completado** (M2) |
 
 ---
 

@@ -140,6 +140,9 @@
   .cli-row:active{background:rgba(255,255,255,.04)}
   .cli-row.sel{color:#fff;background:rgba(226,59,47,.12);box-shadow:inset 2px 0 0 var(--red)}
   .cli-row.bcast{color:var(--dim);font-style:italic}
+  .cli-row.pivot{color:var(--cyan);border-top:1px solid #1e3a42;background:rgba(99,210,232,.06);
+    padding-left:10px;font-weight:600}
+  .cli-row.pivot:active{background:rgba(99,210,232,.14)}
   .tempty{padding:14px 12px;font-size:12px;color:var(--gray);line-height:1.6}
   .selnow{font-size:11px;letter-spacing:1px;color:var(--red-lit);padding:2px 0}
   .selnow b{color:#fff}
@@ -769,6 +772,24 @@ function viability(r){
   if(w3&&w2)  return {label:'WPA2/3',cls:'v-warn',tip:'transición — puede tener PMF'};
   return {label:'VIABLE',cls:'v-ok',tip:'WPA/WPA2 — deauth viable'};
 }
+// Pivot de banda: busca el MISMO SSID en otro BSSID inyectable (2.4 GHz o 5 GHz
+// no-DFS). Sirve para objetivos marcados DFS/PMF: en vez de tocar DFS, saltás al
+// BSSID de la otra banda del mismo router. Prioriza VIABLE y mejor señal.
+function findPivot(r, redes){
+  const name=(r.essid||'').trim();
+  if(!name || name==='<oculta>') return null;
+  let best=null, bestScore=-1e9;
+  for(const o of redes){
+    if(o===r) continue;
+    if((o.essid||'').trim()!==name) continue;
+    if(String(o.bssid||'').toUpperCase()===String(r.bssid||'').toUpperCase()) continue;
+    const v=viability(o);
+    if(v.cls!=='v-ok' && v.cls!=='v-warn') continue;   // solo bandas inyectables
+    const score=(v.cls==='v-ok'?1000:0)+(o.power||-100); // VIABLE primero, luego señal
+    if(score>bestScore){bestScore=score;best=o;}
+  }
+  return best;
+}
 function fillTsel(kind,data){
   const box=document.getElementById('tlist_'+kind);
   if(!box)return;
@@ -792,6 +813,7 @@ function fillTsel(kind,data){
   }
   redes.forEach(r=>{
     const net=document.createElement('div');net.className='net';
+    net.dataset.bssid=r.bssid||'';
     const row=document.createElement('div');row.className='net-row';
     const essid=r.essid&&r.essid!=='<oculta>'?r.essid:'<oculta>';
     const v=(kind==='deauth')?viability(r):null;
@@ -813,6 +835,22 @@ function fillTsel(kind,data){
       bc.textContent='• broadcast — todos los clientes (FF:FF:FF:FF:FF:FF)';
       bc.onclick=e=>{e.stopPropagation();selClient(kind,net,bc,'FF:FF:FF:FF:FF:FF',r);};
       cliWrap.appendChild(bc);
+      // Pivot de banda: si este objetivo no es inyectable (DFS/PMF), ofrecer saltar
+      // al mismo SSID en una banda atacable.
+      if(v && v.cls==='v-bad'){
+        const piv=findPivot(r, redes);
+        if(piv){
+          const pr=document.createElement('div');pr.className='cli-row pivot';
+          pr.innerHTML='⤳ pivotear a banda atacable: CH'+piv.canal+' · '+esc(piv.bssid)+' (VIABLE)';
+          pr.onclick=e=>{
+            e.stopPropagation();
+            const pn=box.querySelector('.net[data-bssid="'+piv.bssid+'"]');
+            if(pn){pn.querySelector('.net-row').click();pn.scrollIntoView({block:'nearest'});}
+            openConsole();push('[OK] Pivot de banda → '+esc(piv.essid)+' ['+piv.bssid+'] CH'+piv.canal+' (VIABLE)','sys');
+          };
+          cliWrap.insertBefore(pr, cliWrap.firstChild);
+        }
+      }
       net.appendChild(cliWrap);
     }
 
